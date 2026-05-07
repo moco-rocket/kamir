@@ -1,6 +1,8 @@
 import io
 import json
 import logging
+import urllib.error
+import urllib.parse
 import urllib.request
 
 from PIL import Image
@@ -20,10 +22,9 @@ _TIMEOUT = 10
 def fetch_art(card: Card) -> RasterImage | None:
     """Fetch card art from Scryfall and return an ESC/POS RasterImage, or None on any failure."""
     try:
-        url = f"https://api.scryfall.com/cards/{card.expansion.lower()}/{card.collector_number}"
-        req = urllib.request.Request(url, headers=_HEADERS)
-        with urllib.request.urlopen(req, timeout=_TIMEOUT) as resp:
-            card_data = json.loads(resp.read())
+        card_data = _fetch_card_data(card)
+        if card_data is None:
+            return None
 
         # DFCs store image_uris per face; use front face as fallback
         image_uris = card_data.get("image_uris") or (
@@ -33,13 +34,43 @@ def fetch_art(card: Card) -> RasterImage | None:
         if not art_url:
             return None
 
-        req2 = urllib.request.Request(art_url, headers=_HEADERS)
-        with urllib.request.urlopen(req2, timeout=_TIMEOUT) as resp2:
-            img_bytes = resp2.read()
+        req = urllib.request.Request(art_url, headers=_HEADERS)
+        with urllib.request.urlopen(req, timeout=_TIMEOUT) as resp:
+            img_bytes = resp.read()
 
         return _to_raster(img_bytes)
     except Exception as e:
         log.debug("fetch_art failed for %s/%s: %s", card.expansion, card.collector_number, e)
+        return None
+
+
+def _fetch_card_data(card: Card) -> dict | None:
+    """Fetch card JSON from Scryfall.
+
+    Tries set+collector-number first; falls back to exact-name search when
+    Scryfall returns an HTTP error (e.g. 400 for non-standard set codes like '40k').
+    """
+    def _get(url: str) -> dict:
+        req = urllib.request.Request(url, headers=_HEADERS)
+        with urllib.request.urlopen(req, timeout=_TIMEOUT) as r:
+            return json.loads(r.read())
+
+    try:
+        return _get(
+            f"https://api.scryfall.com/cards/{card.expansion.lower()}/{card.collector_number}"
+        )
+    except urllib.error.HTTPError:
+        log.debug(
+            "set+number lookup failed (%s/%s), retrying by name",
+            card.expansion, card.collector_number,
+        )
+
+    try:
+        return _get(
+            "https://api.scryfall.com/cards/named?"
+            + urllib.parse.urlencode({"exact": card.name})
+        )
+    except Exception:
         return None
 
 
