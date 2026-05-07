@@ -85,7 +85,7 @@ kamir --debug build-db
 ## テスト
 
 ```bash
-uv run pytest
+pytest
 ```
 
 ## 設定
@@ -98,11 +98,18 @@ mtgjson_db = "data/db/AllPrintings.sqlite"
 kamir_db   = "data/db/kamir_cardpool.sqlite"
 log_file   = "logs/kamir.log"
 
+[play]
+auto_print = false  # true にすると確認なしに即印刷
+
 [printer]
-device = "/dev/usb/lp0"  # プリンターのUSBデバイスパス
+device      = "/dev/usb/lp0"   # Raspberry Pi でのUSBデバイスパス
+usb_vendor  = 0x0000            # lsusb で確認
+usb_product = 0x0000
 
 [sets]
-allowed = ["LEA", "LEB", "2ED", "3ED", "4ED", "5ED", "6ED", "7ED", "8ED", "9ED", "10E"]
+# allowed = "all" で AllPrintings.sqlite 内の全物理プレイ対象セットを自動収録
+# （Un-シリーズ・アルケミー・デジタル専用セットを除く）
+allowed = ["LEA", "2ED", "3ED", "4ED", "5ED", "6ED", "7ED", "8ED", "9ED", "10E"]
 ```
 
 ## プロジェクト構成
