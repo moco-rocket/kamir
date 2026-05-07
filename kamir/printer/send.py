@@ -8,7 +8,8 @@ log = logging.getLogger(__name__)
 
 _ESC = b"\x1b"
 _GS = b"\x1d"
-_INIT = _ESC + b"@"          # ESC @ — initialize printer, clear buffer
+_ESC_T_PC437 = _ESC + b"\x74\x00"   # ESC t 0 — select code page PC437 (no DBCS lead bytes)
+_INIT = _ESC + b"@" + _ESC_T_PC437  # ESC @ initialize, then force single-byte code page
 _BOLD_ON = _ESC + b"E\x01"
 _BOLD_OFF = _ESC + b"E\x00"
 _CUT_FULL = _GS + b"VA\x00"  # GS V A 0 — full paper cut

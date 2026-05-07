@@ -13,8 +13,8 @@ from kamir.printer.render import RasterImage
 
 log = logging.getLogger(__name__)
 
-WIDTH_DOTS = 192  # ESC * nH must be 0 on MJ-5890K; 192 = 0xC0 fits in single byte
-HEIGHT_DOTS = 192  # 24mm × 24mm at 8 dots/mm
+WIDTH_DOTS = 384  # full print width; nL=128 nH=1 for ESC * (requires PC437 code page to avoid DBCS)
+HEIGHT_DOTS = 192  # 24mm at 8 dots/mm
 
 _HEADERS = {
     "User-Agent": "kamir/1.0 (Momir Basic play tool)",

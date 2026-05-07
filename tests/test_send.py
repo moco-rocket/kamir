@@ -22,7 +22,7 @@ def _card(**overrides) -> Card:
 class TestEncode:
     def test_starts_with_init_sequence(self):
         data = _encode(render_card(_card()))
-        assert data[:2] == _INIT
+        assert data[:len(_INIT)] == _INIT
 
     def test_contains_bold_on(self):
         data = _encode(render_card(_card()))
@@ -43,10 +43,10 @@ class TestEncode:
         assert b"\xc3\x9b" not in data  # no raw UTF-8 bytes for Û
 
     def test_raster_image_encoded(self):
-        art = RasterImage(data=bytes(24 * 192), width_bytes=24, height=192)
+        art = RasterImage(data=bytes(48 * 192), width_bytes=48, height=192)
         data = _encode(render_card(_card(), art))
-        # ESC * 0 nL=192 nH=0 — 8-dot single density, 192 dots wide
-        assert _ESC_STAR + bytes([192, 0]) in data
+        # ESC * 0 nL=128 nH=1 — 8-dot single density, 384 dots wide
+        assert _ESC_STAR + bytes([128, 1]) in data
 
 
 class TestPrintCard:
@@ -61,11 +61,11 @@ class TestPrintCard:
         device.touch()
         print_card(_card(), str(device))
         data = device.read_bytes()
-        assert data[:2] == _INIT
+        assert data[:len(_INIT)] == _INIT
         assert _CUT_FULL in data
 
     def test_includes_raster_when_art_provided(self, tmp_path):
-        art = RasterImage(data=bytes(24 * 192), width_bytes=24, height=192)
+        art = RasterImage(data=bytes(48 * 192), width_bytes=48, height=192)
         device = tmp_path / "fake_printer"
         device.touch()
         print_card(_card(), str(device), art)
