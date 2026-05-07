@@ -22,7 +22,14 @@ class Cut:
     pass
 
 
-Instruction = TextLine | Rule | Cut
+@dataclass(frozen=True)
+class RasterImage:
+    data: bytes       # 1-bit packed bitmap, ESC/POS polarity (1=print)
+    width_bytes: int  # dots / 8
+    height: int       # dots
+
+
+Instruction = TextLine | Rule | Cut | RasterImage
 
 
 def _header(name: str, mana_cost: str) -> list[TextLine]:
@@ -43,13 +50,16 @@ def _footer(expansion: str, power: str, toughness: str) -> TextLine:
     return TextLine(f"{exp}  {pt}")
 
 
-def render_card(card: Card) -> list[Instruction]:
+def render_card(card: Card, art: RasterImage | None = None) -> list[Instruction]:
     """Convert a Card to an ordered list of ESC/POS print instructions."""
     out: list[Instruction] = []
 
     out.append(Rule(thick=True))
     out.extend(_header(card.name, card.mana_cost))
     out.append(Rule(thick=True))
+    if art is not None:
+        out.append(art)
+        out.append(Rule(thick=False))
     out.append(TextLine(card.type_line))
     out.append(Rule(thick=False))
 

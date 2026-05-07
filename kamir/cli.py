@@ -42,7 +42,6 @@ def stage_build_db(cfg: dict) -> None:
 def stage_play(cfg: dict) -> None:
     db_path = cfg["paths"]["kamir_db"]
     device = cfg["printer"]["device"]
-    auto_print = cfg.get("play", {}).get("auto_print", False)
 
     if not db_path.exists():
         print("  カードプールが見つかりません。先に 'kamir build-db' を実行してください。")
@@ -76,19 +75,6 @@ def stage_play(cfg: dict) -> None:
         if card is None:
             print(f"  マナ総量 {mv} のクリーチャーはプールに存在しません。")
             continue
-
-        print()
-        print(format_card(card))
-        print()
-
-        if not auto_print:
-            try:
-                confirm = input("  印刷しますか？ [y/N] > ").strip().lower()
-            except (KeyboardInterrupt, EOFError):
-                print()
-                break
-            if confirm != "y":
-                continue
 
         try:
             print_card(card, device)

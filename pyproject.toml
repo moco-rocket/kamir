@@ -3,7 +3,9 @@ name = "kamir"
 version = "0.2.0"
 description = "Interactive Momir Basic play tool for Raspberry Pi + thermal printer"
 requires-python = ">=3.11"
-dependencies = []
+dependencies = [
+    "pillow>=10.0",
+]
 
 [project.scripts]
 kamir = "kamir.cli:main"

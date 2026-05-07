@@ -77,9 +77,6 @@ mtgjson_db = "data/db/AllPrintings.sqlite"
 kamir_db   = "data/db/kamir_cardpool.sqlite"
 log_file   = "logs/kamir.log"
 
-[play]
-auto_print = false   # trueにすると確認なしで即印刷
-
 [printer]
 device = "/dev/usb/lp0"  # プリンターのUSBデバイスパス
 
