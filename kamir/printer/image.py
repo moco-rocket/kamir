@@ -16,7 +16,10 @@ log = logging.getLogger(__name__)
 WIDTH_DOTS = 384
 HEIGHT_DOTS = 192  # 24mm at 8 dots/mm; art_crop images are wider than tall
 
-_HEADERS = {"User-Agent": "kamir/1.0 (Momir Basic play tool)"}
+_HEADERS = {
+    "User-Agent": "kamir/1.0 (Momir Basic play tool)",
+    "Accept": "application/json",
+}
 _TIMEOUT = 10
 _SCRYFALL_DELAY = 0.1  # seconds between Scryfall API requests
 
