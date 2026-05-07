@@ -1,3 +1,4 @@
+import sqlite3
 from pathlib import Path
 
 import pytest
@@ -37,12 +38,34 @@ def db_path(tmp_path) -> Path:
     return path
 
 
+@pytest.fixture
+def old_schema_db_path(tmp_path) -> Path:
+    """DB built without the art_raster column (simulates pre-art-feature schema)."""
+    path = tmp_path / "old_kamir_cardpool.sqlite"
+    conn = sqlite3.connect(path)
+    conn.execute("""
+        CREATE TABLE cards (
+            name TEXT PRIMARY KEY, mana_value INTEGER, mana_cost TEXT,
+            type_line TEXT, oracle_text TEXT, expansion TEXT,
+            power TEXT, toughness TEXT, layout TEXT, collector_number TEXT
+        )
+    """)
+    conn.execute(
+        "INSERT INTO cards VALUES (?,?,?,?,?,?,?,?,?,?)",
+        ("Grizzly Bears", 2, "{1}{G}", "Creature - Bear", "", "2ED", "2", "2", "normal", "178"),
+    )
+    conn.commit()
+    conn.close()
+    return path
+
+
 class TestLoadArt:
     def test_returns_none_when_no_art(self, db_path):
         assert load_art(db_path, _card()) is None
 
     def test_returns_raster_after_store(self, db_path, mocker):
         mocker.patch("kamir.db.art.fetch_art", return_value=_fake_art())
+        mocker.patch("kamir.db.art.time.sleep")
         fetch_and_store_art(db_path, [_card()])
         result = load_art(db_path, _card())
         assert isinstance(result, RasterImage)
@@ -52,25 +75,33 @@ class TestLoadArt:
         unknown = _card(name="Unknown Card")
         assert load_art(db_path, unknown) is None
 
+    def test_returns_none_for_old_schema(self, old_schema_db_path):
+        # Old DBs lack art_raster — should not crash; fall back to printing without art.
+        assert load_art(old_schema_db_path, _card()) is None
+
 
 class TestFetchAndStoreArt:
     def test_stores_art_when_fetch_succeeds(self, db_path, mocker):
         mocker.patch("kamir.db.art.fetch_art", return_value=_fake_art())
+        mocker.patch("kamir.db.art.time.sleep")
         fetch_and_store_art(db_path, [_card()])
         assert load_art(db_path, _card()) is not None
 
     def test_skips_when_art_already_stored(self, db_path, mocker):
         mock_fetch = mocker.patch("kamir.db.art.fetch_art", return_value=_fake_art())
+        mocker.patch("kamir.db.art.time.sleep")
         fetch_and_store_art(db_path, [_card()])
         fetch_and_store_art(db_path, [_card()])  # second call should skip
         assert mock_fetch.call_count == 1
 
     def test_handles_fetch_failure_gracefully(self, db_path, mocker):
         mocker.patch("kamir.db.art.fetch_art", return_value=None)
+        mocker.patch("kamir.db.art.time.sleep")
         fetch_and_store_art(db_path, [_card()])  # should not raise
         assert load_art(db_path, _card()) is None
 
     def test_idempotent_on_empty_card_list(self, db_path, mocker):
         mock_fetch = mocker.patch("kamir.db.art.fetch_art", return_value=_fake_art())
+        mocker.patch("kamir.db.art.time.sleep")
         fetch_and_store_art(db_path, [])
         assert mock_fetch.call_count == 0

@@ -1,5 +1,6 @@
 import io
 import json
+import logging
 import urllib.request
 
 from PIL import Image
@@ -7,11 +8,13 @@ from PIL import Image
 from kamir.domain import Card
 from kamir.printer.render import RasterImage
 
+log = logging.getLogger(__name__)
+
 WIDTH_DOTS = 384
 HEIGHT_DOTS = 192  # 24mm at 8 dots/mm; art_crop images are wider than tall
 
 _HEADERS = {"User-Agent": "kamir/1.0 (Momir Basic play tool)"}
-_TIMEOUT = 4
+_TIMEOUT = 10
 
 
 def fetch_art(card: Card) -> RasterImage | None:
@@ -35,7 +38,8 @@ def fetch_art(card: Card) -> RasterImage | None:
             img_bytes = resp2.read()
 
         return _to_raster(img_bytes)
-    except Exception:
+    except Exception as e:
+        log.debug("fetch_art failed for %s/%s: %s", card.expansion, card.collector_number, e)
         return None
 
 
