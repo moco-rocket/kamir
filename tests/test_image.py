@@ -6,7 +6,7 @@ import pytest
 from PIL import Image
 
 from kamir.domain import Card
-from kamir.printer.image import _HEIGHT_DOTS, _WIDTH_DOTS, _to_raster, fetch_art
+from kamir.printer.image import HEIGHT_DOTS, WIDTH_DOTS, _to_raster, fetch_art
 from kamir.printer.render import RasterImage
 
 
@@ -40,8 +40,8 @@ class TestToRaster:
 
     def test_output_dimensions(self):
         result = _to_raster(_make_jpeg())
-        assert result.width_bytes == _WIDTH_DOTS // 8
-        assert result.height == _HEIGHT_DOTS
+        assert result.width_bytes == WIDTH_DOTS // 8
+        assert result.height == HEIGHT_DOTS
 
     def test_data_length_matches_dimensions(self):
         result = _to_raster(_make_jpeg())

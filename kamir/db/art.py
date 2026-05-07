@@ -3,7 +3,7 @@ import sqlite3
 from pathlib import Path
 
 from kamir.domain import Card
-from kamir.printer.image import _HEIGHT_DOTS, _WIDTH_DOTS, fetch_art
+from kamir.printer.image import HEIGHT_DOTS, WIDTH_DOTS, fetch_art
 from kamir.printer.render import RasterImage
 
 log = logging.getLogger(__name__)
@@ -58,8 +58,8 @@ def load_art(db_path: Path, card: Card) -> RasterImage | None:
         if row and row[0] is not None:
             return RasterImage(
                 data=bytes(row[0]),
-                width_bytes=_WIDTH_DOTS // 8,
-                height=_HEIGHT_DOTS,
+                width_bytes=WIDTH_DOTS // 8,
+                height=HEIGHT_DOTS,
             )
         return None
     finally:
