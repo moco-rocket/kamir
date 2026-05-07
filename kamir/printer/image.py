@@ -1,6 +1,7 @@
 import io
 import json
 import logging
+import time
 import urllib.error
 import urllib.parse
 import urllib.request
@@ -17,6 +18,7 @@ HEIGHT_DOTS = 192  # 24mm at 8 dots/mm; art_crop images are wider than tall
 
 _HEADERS = {"User-Agent": "kamir/1.0 (Momir Basic play tool)"}
 _TIMEOUT = 10
+_SCRYFALL_DELAY = 0.1  # seconds between Scryfall API requests
 
 
 def fetch_art(card: Card) -> RasterImage | None:
@@ -25,23 +27,83 @@ def fetch_art(card: Card) -> RasterImage | None:
         card_data = _fetch_card_data(card)
         if card_data is None:
             return None
-
-        # DFCs store image_uris per face; use front face as fallback
-        image_uris = card_data.get("image_uris") or (
-            card_data.get("card_faces", [{}])[0].get("image_uris", {})
-        )
-        art_url = image_uris.get("art_crop")
+        art_url = _extract_art_crop_url(card_data)
         if not art_url:
             return None
-
-        req = urllib.request.Request(art_url, headers=_HEADERS)
-        with urllib.request.urlopen(req, timeout=_TIMEOUT) as resp:
-            img_bytes = resp.read()
-
-        return _to_raster(img_bytes)
+        return fetch_art_from_url(art_url)
     except Exception as e:
         log.debug("fetch_art failed for %s/%s: %s", card.expansion, card.collector_number, e)
         return None
+
+
+def fetch_art_from_url(url: str) -> RasterImage | None:
+    """Download image from CDN URL and convert to ESC/POS raster, or None on failure."""
+    try:
+        req = urllib.request.Request(url, headers=_HEADERS)
+        with urllib.request.urlopen(req, timeout=_TIMEOUT) as resp:
+            return _to_raster(resp.read())
+    except Exception as e:
+        log.debug("fetch_art_from_url failed for %s: %s", url, e)
+        return None
+
+
+def batch_fetch_art_crop_urls(cards: list[Card]) -> dict[str, str]:
+    """Batch-fetch art_crop URLs using POST /cards/collection (75 cards/batch).
+
+    Falls back to individual named search for cards Scryfall can't resolve by set/number.
+    Returns dict[card_name -> art_crop_url].
+    """
+    result: dict[str, str] = {}
+
+    for i in range(0, len(cards), 75):
+        batch = cards[i:i + 75]
+        by_key = {(c.expansion.lower(), c.collector_number): c for c in batch}
+        identifiers = [
+            {"set": c.expansion.lower(), "collector_number": c.collector_number}
+            for c in batch
+        ]
+
+        try:
+            body = json.dumps({"identifiers": identifiers}).encode()
+            req = urllib.request.Request(
+                "https://api.scryfall.com/cards/collection",
+                data=body,
+                headers={**_HEADERS, "Content-Type": "application/json"},
+            )
+            with urllib.request.urlopen(req, timeout=_TIMEOUT) as r:
+                resp = json.loads(r.read())
+        except Exception as e:
+            log.debug("batch collection request failed (batch %d): %s", i // 75, e)
+            time.sleep(_SCRYFALL_DELAY)
+            continue
+
+        for card_data in resp.get("data", []):
+            url = _extract_art_crop_url(card_data)
+            if url:
+                result[card_data["name"]] = url
+
+        for nf in resp.get("not_found", []):
+            key = (nf.get("set", ""), nf.get("collector_number", ""))
+            card = by_key.get(key)
+            if card is None:
+                continue
+            cd = _fetch_card_data(card)
+            if cd:
+                url = _extract_art_crop_url(cd)
+                if url:
+                    result[card.name] = url
+
+        time.sleep(_SCRYFALL_DELAY)
+
+    return result
+
+
+def _extract_art_crop_url(card_data: dict) -> str | None:
+    # DFCs store image_uris per face; use front face as fallback
+    image_uris = card_data.get("image_uris") or (
+        card_data.get("card_faces", [{}])[0].get("image_uris", {})
+    )
+    return image_uris.get("art_crop")
 
 
 def _fetch_card_data(card: Card) -> dict | None:

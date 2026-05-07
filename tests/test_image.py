@@ -7,7 +7,14 @@ import pytest
 from PIL import Image
 
 from kamir.domain import Card
-from kamir.printer.image import HEIGHT_DOTS, WIDTH_DOTS, _to_raster, fetch_art
+from kamir.printer.image import (
+    HEIGHT_DOTS,
+    WIDTH_DOTS,
+    _to_raster,
+    batch_fetch_art_crop_urls,
+    fetch_art,
+    fetch_art_from_url,
+)
 from kamir.printer.render import RasterImage
 
 
@@ -122,3 +129,62 @@ class TestFetchArt:
         )
         mocker.patch("urllib.request.urlopen", side_effect=[http_400, OSError("network error")])
         assert fetch_art(_card(expansion="40K", collector_number="1")) is None
+
+
+class TestFetchArtFromUrl:
+    def _mock_resp(self, body: bytes) -> MagicMock:
+        m = MagicMock()
+        m.read.return_value = body
+        m.__enter__ = lambda s: s
+        m.__exit__ = MagicMock(return_value=False)
+        return m
+
+    def test_returns_raster_on_success(self, mocker):
+        mocker.patch("urllib.request.urlopen", return_value=self._mock_resp(_make_jpeg()))
+        assert isinstance(fetch_art_from_url("https://example.com/art.jpg"), RasterImage)
+
+    def test_returns_none_on_network_error(self, mocker):
+        mocker.patch("urllib.request.urlopen", side_effect=OSError("network error"))
+        assert fetch_art_from_url("https://example.com/art.jpg") is None
+
+
+class TestBatchFetchArtCropUrls:
+    def _mock_resp(self, body: bytes) -> MagicMock:
+        m = MagicMock()
+        m.read.return_value = body
+        m.__enter__ = lambda s: s
+        m.__exit__ = MagicMock(return_value=False)
+        return m
+
+    def test_returns_urls_for_found_cards(self, mocker):
+        resp = self._mock_resp(json.dumps({
+            "data": [{"name": "Grizzly Bears", "image_uris": {"art_crop": "https://example.com/art.jpg"}}],
+            "not_found": [],
+        }).encode())
+        mocker.patch("urllib.request.urlopen", return_value=resp)
+        mocker.patch("kamir.printer.image.time.sleep")
+        result = batch_fetch_art_crop_urls([_card()])
+        assert result == {"Grizzly Bears": "https://example.com/art.jpg"}
+
+    def test_falls_back_for_not_found(self, mocker):
+        batch_resp = self._mock_resp(json.dumps({
+            "data": [],
+            "not_found": [{"set": "2ed", "collector_number": "178"}],
+        }).encode())
+        named_resp = self._mock_resp(
+            json.dumps({"image_uris": {"art_crop": "https://example.com/art.jpg"}}).encode()
+        )
+        mocker.patch("urllib.request.urlopen", side_effect=[batch_resp, named_resp])
+        mocker.patch("kamir.printer.image.time.sleep")
+        result = batch_fetch_art_crop_urls([_card()])
+        assert result == {"Grizzly Bears": "https://example.com/art.jpg"}
+
+    def test_handles_network_failure(self, mocker):
+        mocker.patch("urllib.request.urlopen", side_effect=OSError("network error"))
+        mocker.patch("kamir.printer.image.time.sleep")
+        assert batch_fetch_art_crop_urls([_card()]) == {}
+
+    def test_empty_list_returns_empty(self, mocker):
+        mock_urlopen = mocker.patch("urllib.request.urlopen")
+        assert batch_fetch_art_crop_urls([]) == {}
+        mock_urlopen.assert_not_called()
