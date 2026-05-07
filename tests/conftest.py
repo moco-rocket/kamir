@@ -20,15 +20,8 @@ def _make_card(**overrides) -> dict:
         "isFunny": 0,
         "isReprint": 0,
         "baseSetSize": 302,
-        "releaseDate": "1993-01-01",
-        "set_row_id": 1,
     }
     return {**base, **overrides}
-
-
-@pytest.fixture
-def sample_card():
-    return _make_card()
 
 
 @pytest.fixture
