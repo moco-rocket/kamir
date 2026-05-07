@@ -1,4 +1,3 @@
-import sqlite3
 import pytest
 
 
@@ -37,8 +36,3 @@ def make_card():
     return _make_card
 
 
-@pytest.fixture
-def in_memory_db():
-    conn = sqlite3.connect(":memory:")
-    yield conn
-    conn.close()

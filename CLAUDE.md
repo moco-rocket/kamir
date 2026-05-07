@@ -15,31 +15,41 @@ Keep the following concerns strictly separate. Do not mix them in a single modul
 
 | Layer | Responsibility |
 |---|---|
-| `kamir/db/` | Loading and querying MTGJSON (`AllPrintings.sqlite`) |
-| `kamir/filter/` | Card filtering logic (pure functions, no I/O) |
-| `kamir/images/` | Image fetching from Scryfall and local caching |
-| `kamir/render/` | PDF rendering and card layout logic |
-| `kamir/printer/` | Printer integration (sending PDFs to the system printer) |
+| `kamir/domain.py` | `Card` frozen dataclass — shared by all subsystems |
+| `kamir/db/` | Loading MTGJSON (`AllPrintings.sqlite`) and writing the card pool DB |
+| `kamir/filter/` | Card filtering logic (pure functions, no I/O); also `to_card()` and text utilities |
+| `kamir/play/` | Interactive game session: random creature selection and terminal display *(Phase 2)* |
+| `kamir/printer/` | ESC/POS text rendering and MJ-5890K hardware I/O *(Phase 3)* |
 | `kamir/cli.py` | CLI entry point only; no business logic |
 | `kamir/config.py` | Configuration loading from `config.toml` |
+
+**Removed from scope:** `kamir/images/` and `kamir/render/` no longer exist.
+Scryfall image fetching and PDF generation are not part of this project.
 
 ## Card Filtering
 - Card filtering functions must be **pure functions**: same input → same output, no side effects, no I/O.
 - Place all filtering logic in `kamir/filter/`.
 - Filtering criteria (allowed sets, card types, layout rules) must be data-driven, not hardcoded conditionals.
+- `filter_cards()` returns `list[Card]`, not `list[dict]`.
+
+## Domain Model
+- `kamir/domain.py` defines the `Card` frozen dataclass.
+- No subsystem passes raw `dict` rows across subsystem boundaries; use `Card` objects instead.
+- The `to_card()` function in `kamir/filter/cards.py` converts raw MTGJSON dicts to `Card`.
 
 ## Testing
 - Write tests for every new piece of logic added.
 - Tests live in `tests/` mirroring the `kamir/` structure.
-- **No network access in tests.** Mock or fixture all HTTP calls (Scryfall API, etc.).
+- **No network access in tests.** Mock or fixture all HTTP calls.
 - Use real SQLite databases only from local fixture files; never download during tests.
+- For `kamir/play/select.py`: inject the random source so tests can use a fixed seed.
 - Run tests with `uv run pytest`.
 
 ## Raspberry Pi Compatibility
 - Assume the deployment target is **Raspberry Pi OS Bookworm (64-bit), headless**.
-- Do not use OpenCV (`cv2`). Use Pillow (`PIL`) for all image processing.
 - Do not assume a display is available (`DISPLAY` env var may be unset).
 - Prefer lightweight dependencies; avoid packages that require compilation of large C extensions.
+- Do not use OpenCV or Pillow — image processing is not part of this project.
 - All long-running operations must be resumable (idempotent): skip already-processed items.
 
 ## General Coding Rules

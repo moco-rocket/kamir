@@ -1,25 +1,18 @@
 [paths]
-mtgjson_db  = "data/db/AllPrintings.sqlite"
-kamir_db    = "data/db/kamir_cardpool.sqlite"
-img_dir     = "data/img"
-pdf_dir     = "data/pdf"
-log_file    = "logs/kamir.log"
-placeholder = "resources/no_image.jpg"
+mtgjson_db = "data/db/AllPrintings.sqlite"
+kamir_db   = "data/db/kamir_cardpool.sqlite"
+log_file   = "logs/kamir.log"
 
-[image]
-# Source image is resized to resize_w x resize_h before cropping
-resize_w = 223
-resize_h = 310
-# Crop box: (left, upper, right, lower) applied on the resized image
-crop = [26, 47, 197, 147]
+[play]
+# If true, print immediately after selection without a confirmation prompt.
+auto_print = false
 
-[pdf]
-card_width_mm  = 48
-card_height_mm = 67
-
-[scryfall]
-base_url      = "https://api.scryfall.com"
-request_delay = 1.0   # seconds between requests
+[printer]
+# USB device path on Raspberry Pi (check with: ls /dev/usb/lp*)
+device      = "/dev/usb/lp0"
+# USB vendor and product IDs for MJ-5890K (check with: lsusb)
+usb_vendor  = 0x0000
+usb_product = 0x0000
 
 [sets]
 allowed = [

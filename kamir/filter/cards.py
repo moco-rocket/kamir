@@ -1,10 +1,9 @@
-import unicodedata
 import textwrap
+import unicodedata
 
-# Layouts whose card_faces list must be inspected to pick the front face.
+from kamir.domain import Card
+
 _DFC_LAYOUTS = {"transform", "meld", "modal_dfc"}
-
-# Layouts supported for image fetch and PDF generation.
 SUPPORTED_LAYOUTS = {"normal", "adventure", "leveler"} | _DFC_LAYOUTS
 
 
@@ -18,9 +17,8 @@ def is_allowed_set(card: dict, allowed_sets: set[str]) -> bool:
 
 
 def has_valid_collector_number(card: dict) -> bool:
-    number = str(card.get("number", ""))
     try:
-        int(number)
+        int(str(card.get("number", "")))
         return True
     except ValueError:
         return False
@@ -51,7 +49,7 @@ def has_supported_layout(card: dict) -> bool:
     return card.get("layout", "") in SUPPORTED_LAYOUTS
 
 
-def normalize_oracle(text: str) -> str:
+def normalize_oracle(text: str | None) -> str:
     """Strip diacritics and normalize whitespace in oracle text."""
     if not text:
         return ""
@@ -65,7 +63,7 @@ def canonical_name(card: dict) -> str:
     return card.get("asciiName") or card.get("faceName") or card.get("name", "")
 
 
-def wrap_oracle(text: str, width: int = 39) -> str:
+def wrap_oracle(text: str | None, width: int = 39) -> str:
     """Wrap oracle text: double-spaces become paragraph breaks, lines wrap at width."""
     if not text:
         return ""
@@ -74,16 +72,32 @@ def wrap_oracle(text: str, width: int = 39) -> str:
     for para in paragraphs:
         wrapped = textwrap.wrap(para, width)
         lines.extend(wrapped if wrapped else [""])
-    # Remove trailing blank line added by the paragraph loop
     while lines and lines[-1] == "":
         lines.pop()
     return "\n".join(lines)
 
 
-def filter_cards(raw_cards: list[dict], allowed_sets: set[str]) -> list[dict]:
-    """Return filtered and normalised card dicts ready for DB insertion."""
+def to_card(card: dict) -> Card:
+    """Convert a raw MTGJSON card dict to a Card domain object."""
+    oracle_raw = (card.get("text") or "").replace("•", "*").replace("—", "-").replace("â", "a")
+    return Card(
+        name=canonical_name(card),
+        mana_value=int(card.get("manaValue") or 0),
+        mana_cost=(card.get("manaCost") or "").replace("—", "-"),
+        type_line=(card.get("type") or "").replace("—", "-"),
+        oracle_text=normalize_oracle(oracle_raw),
+        expansion=card.get("setCode", ""),
+        power=card.get("power", "") or "",
+        toughness=card.get("toughness", "") or "",
+        layout=card.get("layout", ""),
+        collector_number=str(card.get("number", "")),
+    )
+
+
+def filter_cards(raw_cards: list[dict], allowed_sets: set[str]) -> list[Card]:
+    """Return filtered Card objects from raw MTGJSON dicts."""
     seen: set[str] = set()
-    result: list[dict] = []
+    result: list[Card] = []
 
     for card in raw_cards:
         if not (
@@ -103,23 +117,6 @@ def filter_cards(raw_cards: list[dict], allowed_sets: set[str]) -> list[dict]:
             continue
         seen.add(name)
 
-        oracle_raw = (card.get("text") or "").replace("•", "*").replace("—", "-")
-        oracle_raw = oracle_raw.replace("â", "a")  # â
-
-        result.append(
-            {
-                "name": name,
-                "mana_value": int(card.get("manaValue") or 0),
-                "mana_cost": (card.get("manaCost") or "").replace("—", "-"),
-                "type": (card.get("type") or "").replace("—", "-"),
-                "oracle": normalize_oracle(oracle_raw),
-                "expansion": card.get("setCode", ""),
-                "power": card.get("power", ""),
-                "toughness": card.get("toughness", ""),
-                "layout": card.get("layout", ""),
-                "number": str(card.get("number", "")),
-                "release_date": card.get("releaseDate", ""),
-            }
-        )
+        result.append(to_card(card))
 
     return result
