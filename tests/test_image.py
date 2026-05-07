@@ -8,7 +8,6 @@ from PIL import Image
 
 from kamir.domain import Card
 from kamir.printer.image import (
-    HEIGHT_DOTS,
     WIDTH_DOTS,
     _to_raster,
     batch_fetch_art_crop_urls,
@@ -47,9 +46,12 @@ class TestToRaster:
         assert isinstance(result, RasterImage)
 
     def test_output_dimensions(self):
-        result = _to_raster(_make_jpeg())
+        w, h = 100, 60
+        result = _to_raster(_make_jpeg(width=w, height=h))
         assert result.width_bytes == WIDTH_DOTS // 8
-        assert result.height == HEIGHT_DOTS
+        # height uses WIDTH_DOTS//2 as effective width (printer renders 192 cols across full 384-dot head)
+        expected_h = max(8, round(WIDTH_DOTS // 2 * h / w / 8) * 8)
+        assert result.height == expected_h
 
     def test_data_length_matches_dimensions(self):
         result = _to_raster(_make_jpeg())

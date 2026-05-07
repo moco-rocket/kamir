@@ -26,7 +26,8 @@ def _card(**overrides) -> Card:
 
 
 def _fake_art() -> RasterImage:
-    return RasterImage(data=bytes(24 * 192), width_bytes=24, height=192)
+    # 192×72: WIDTH_DOTS//2=96 effective width, 626×457 source → round(96*457/626/8)*8=72
+    return RasterImage(data=bytes(24 * 72), width_bytes=24, height=72)
 
 
 @pytest.fixture
@@ -78,7 +79,7 @@ class TestLoadArt:
         fetch_and_store_art(db_path, [_card()])
         result = load_art(db_path, _card())
         assert isinstance(result, RasterImage)
-        assert len(result.data) == 24 * 192
+        assert len(result.data) == 24 * 72
 
     def test_returns_none_for_unknown_card(self, db_path):
         unknown = _card(name="Unknown Card")

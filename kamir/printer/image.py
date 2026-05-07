@@ -14,7 +14,6 @@ from kamir.printer.render import RasterImage
 log = logging.getLogger(__name__)
 
 WIDTH_DOTS = 192  # ESC * nH must be 0 on MJ-5890K; 192 = 0xC0 fits in single byte
-HEIGHT_DOTS = 192  # 24mm × 24mm at 8 dots/mm
 
 _HEADERS = {
     "User-Agent": "kamir/1.0 (Momir Basic play tool)",
@@ -142,9 +141,14 @@ def _fetch_card_data(card: Card) -> dict | None:
 
 def _to_raster(img_bytes: bytes) -> RasterImage:
     img = Image.open(io.BytesIO(img_bytes)).convert("L")
-    img = img.resize((WIDTH_DOTS, HEIGHT_DOTS), Image.LANCZOS)
+    orig_w, orig_h = img.size
+    # The printer renders WIDTH_DOTS columns across its full 384-dot head (nH ignored),
+    # so each column covers 2 physical dots. Halve effective width when computing height
+    # to preserve source aspect ratio at the printer's actual physical proportions.
+    height = max(8, round(WIDTH_DOTS // 2 * orig_h / orig_w / 8) * 8)
+    img = img.resize((WIDTH_DOTS, height), Image.LANCZOS)
     img = img.convert("1", dither=Image.Dither.FLOYDSTEINBERG)
     # PIL "1" tobytes: 0=black→0-bit, 1=white→1-bit, packed MSB-first.
-    # ESC/POS GS v 0: 1=print (black). Invert all bits.
+    # ESC/POS ESC *: 1=print (black). Invert all bits.
     data = bytes(b ^ 0xFF for b in img.tobytes("raw", "1"))
-    return RasterImage(data=data, width_bytes=WIDTH_DOTS // 8, height=HEIGHT_DOTS)
+    return RasterImage(data=data, width_bytes=WIDTH_DOTS // 8, height=height)
