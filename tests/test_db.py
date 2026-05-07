@@ -3,7 +3,55 @@ import sqlite3
 import pytest
 
 from kamir.domain import Card
+from kamir.db.load import all_set_codes, _EXCLUDED_SET_TYPES
 from kamir.db.write import create_kamir_db, insert_cards
+
+
+def _make_source_db(*set_rows: tuple) -> sqlite3.Connection:
+    """In-memory AllPrintings-like DB with only the sets table."""
+    conn = sqlite3.connect(":memory:")
+    conn.execute("CREATE TABLE sets (code TEXT, type TEXT, isOnlineOnly INTEGER)")
+    conn.executemany("INSERT INTO sets VALUES (?, ?, ?)", set_rows)
+    conn.commit()
+    return conn
+
+
+class TestAllSetCodes:
+    def test_expansion_included(self):
+        conn = _make_source_db(("ZEN", "expansion", 0))
+        assert "ZEN" in all_set_codes(conn)
+
+    def test_funny_excluded(self):
+        conn = _make_source_db(("UNF", "funny", 0))
+        assert "UNF" not in all_set_codes(conn)
+
+    def test_alchemy_excluded(self):
+        conn = _make_source_db(("YMID", "alchemy", 0))
+        assert "YMID" not in all_set_codes(conn)
+
+    def test_online_only_excluded(self):
+        conn = _make_source_db(("AKR", "masters", 1))
+        assert "AKR" not in all_set_codes(conn)
+
+    def test_commander_included(self):
+        conn = _make_source_db(("C21", "commander", 0))
+        assert "C21" in all_set_codes(conn)
+
+    def test_multiple_mixed(self):
+        conn = _make_source_db(
+            ("ZEN", "expansion", 0),
+            ("UNF", "funny", 0),
+            ("C21", "commander", 0),
+            ("YMID", "alchemy", 0),
+            ("AKR", "masters", 1),
+        )
+        result = all_set_codes(conn)
+        assert result == {"ZEN", "C21"}
+
+    def test_all_excluded_types_rejected(self):
+        rows = [(f"T{i}", t, 0) for i, t in enumerate(_EXCLUDED_SET_TYPES)]
+        conn = _make_source_db(*rows)
+        assert all_set_codes(conn) == set()
 
 
 @pytest.fixture
