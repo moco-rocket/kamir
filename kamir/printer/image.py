@@ -11,7 +11,7 @@ _WIDTH_DOTS = 384
 _HEIGHT_DOTS = 192  # 24mm at 8 dots/mm; art_crop images are wider than tall
 
 _HEADERS = {"User-Agent": "kamir/1.0 (Momir Basic play tool)"}
-_TIMEOUT = 8
+_TIMEOUT = 4
 
 
 def fetch_art(card: Card) -> RasterImage | None:
@@ -42,18 +42,8 @@ def fetch_art(card: Card) -> RasterImage | None:
 def _to_raster(img_bytes: bytes) -> RasterImage:
     img = Image.open(io.BytesIO(img_bytes)).convert("L")
     img = img.resize((_WIDTH_DOTS, _HEIGHT_DOTS), Image.LANCZOS)
-
-    pixels = img.tobytes()  # one byte per pixel (grayscale "L" mode), row-major
-    width_bytes = _WIDTH_DOTS // 8
-    buf = bytearray()
-    for y in range(_HEIGHT_DOTS):
-        for x_byte in range(width_bytes):
-            byte_val = 0
-            for bit in range(8):
-                x = x_byte * 8 + bit
-                # Dark pixel (< 128) → print dot; ESC/POS: 1 = print
-                if pixels[y * _WIDTH_DOTS + x] < 128:
-                    byte_val |= 0x80 >> bit
-            buf.append(byte_val)
-
-    return RasterImage(data=bytes(buf), width_bytes=width_bytes, height=_HEIGHT_DOTS)
+    img = img.convert("1", dither=Image.Dither.FLOYDSTEINBERG)
+    # PIL "1" tobytes: 0=black→0-bit, 1=white→1-bit, packed MSB-first.
+    # ESC/POS GS v 0: 1=print (black). Invert all bits.
+    data = bytes(b ^ 0xFF for b in img.tobytes())
+    return RasterImage(data=data, width_bytes=_WIDTH_DOTS // 8, height=_HEIGHT_DOTS)

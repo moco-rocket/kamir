@@ -1,4 +1,6 @@
 import io
+import json
+from unittest.mock import MagicMock
 
 import pytest
 from PIL import Image
@@ -65,37 +67,37 @@ class TestToRaster:
 
 
 class TestFetchArt:
+    def _mock_resp(self, body: bytes) -> MagicMock:
+        m = MagicMock()
+        m.read.return_value = body
+        m.__enter__ = lambda s: s
+        m.__exit__ = MagicMock(return_value=False)
+        return m
+
     def test_returns_none_on_network_error(self, mocker):
         mocker.patch("urllib.request.urlopen", side_effect=OSError("network error"))
         assert fetch_art(_card()) is None
 
     def test_returns_none_when_no_art_url(self, mocker):
-        import json
-        from unittest.mock import MagicMock
-
-        mock_resp = MagicMock()
-        mock_resp.read.return_value = json.dumps({"image_uris": {}}).encode()
-        mock_resp.__enter__ = lambda s: s
-        mock_resp.__exit__ = MagicMock(return_value=False)
-        mocker.patch("urllib.request.urlopen", return_value=mock_resp)
+        resp = self._mock_resp(json.dumps({"image_uris": {}}).encode())
+        mocker.patch("urllib.request.urlopen", return_value=resp)
         assert fetch_art(_card()) is None
 
     def test_returns_raster_on_success(self, mocker):
-        import json
-        from unittest.mock import MagicMock
-
-        card_resp = MagicMock()
-        card_resp.read.return_value = json.dumps(
-            {"image_uris": {"art_crop": "https://example.com/art.jpg"}}
-        ).encode()
-        card_resp.__enter__ = lambda s: s
-        card_resp.__exit__ = MagicMock(return_value=False)
-
-        img_resp = MagicMock()
-        img_resp.read.return_value = _make_jpeg()
-        img_resp.__enter__ = lambda s: s
-        img_resp.__exit__ = MagicMock(return_value=False)
-
+        card_resp = self._mock_resp(
+            json.dumps({"image_uris": {"art_crop": "https://example.com/art.jpg"}}).encode()
+        )
+        img_resp = self._mock_resp(_make_jpeg())
         mocker.patch("urllib.request.urlopen", side_effect=[card_resp, img_resp])
-        result = fetch_art(_card())
-        assert isinstance(result, RasterImage)
+        assert isinstance(fetch_art(_card()), RasterImage)
+
+    def test_dfc_uses_card_faces_fallback(self, mocker):
+        card_resp = self._mock_resp(json.dumps({
+            "card_faces": [
+                {"image_uris": {"art_crop": "https://example.com/front.jpg"}},
+                {"image_uris": {"art_crop": "https://example.com/back.jpg"}},
+            ]
+        }).encode())
+        img_resp = self._mock_resp(_make_jpeg())
+        mocker.patch("urllib.request.urlopen", side_effect=[card_resp, img_resp])
+        assert isinstance(fetch_art(_card()), RasterImage)
