@@ -42,6 +42,12 @@ uv run kamir build-db
 # カードプールDBを構築（AllPrintings.sqlite から）
 uv run kamir build-db
 
+# DBを完全に作り直す（スキーマ変更後やリセット時）
+uv run kamir build-db --force
+
+# アートのダウンロード状況を確認する
+uv run kamir art-status
+
 # ゲームセッション開始
 uv run kamir play
 
@@ -99,11 +105,8 @@ kamir/
 
 詳細は [docs/architecture.md](docs/architecture.md) を参照してください。
 
-## 実装フェーズ
+## Legal
 
-| フェーズ | 内容 | 状態 |
-|---|---|---|
-| Phase 1 | Card ドメインモデル、DBビルダー、モジュール整理 | ✅ 完了 |
-| Phase 2 | プレイアプリ（対話型クリーチャー選択・ターミナル表示） | ✅ 完了 |
-| Phase 3 | 印刷（ESC/POSテキスト描画・MJ-5890K送信） | ✅ 完了 |
-| Phase 4 | Raspberry Pi実機テスト・設定調整 | ✅ 完了 |
+Kamir is unofficial Fan Content permitted under the Fan Content Policy. Not approved/endorsed by Wizards. Portions of the materials used are property of Wizards of the Coast. ©Wizards of the Coast LLC.
+
+Card images are provided by [Scryfall](https://scryfall.com) and are used in accordance with their [terms of service](https://scryfall.com/docs/terms).
