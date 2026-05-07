@@ -8,9 +8,8 @@
 | Dependency management | uv | Fast, reproducible, lockfile-based |
 | Database | SQLite (stdlib `sqlite3`) | No server; file-based; ships with Python |
 | CLI | `argparse` (stdlib) | No extra dependency |
-| Progress display | `tqdm` | Lightweight; works in headless terminals |
 | Configuration | `tomllib` (stdlib 3.11+) + `config.toml` | No extra dependency |
-| Thermal printing | `python-escpos` | ESC/POS support for MJ-5890K; USB and serial |
+| Thermal printing | Raw ESC/POS bytes over file I/O (stdlib only) | No extra dependency; direct write to `/dev/usb/lp0` |
 | Testing | `pytest` + `pytest-mock` | Standard; easy fixture support |
 
 Removed from the previous scope:
@@ -178,8 +177,8 @@ Pure functions only. Input: raw `dict` rows from MTGJSON. Output: `Card` objects
 ### `kamir/printer/`
 - `render.py`: converts a `Card` into an ordered list of ESC/POS instructions
   (text segments with formatting directives). Pure function; no hardware dependency.
-- `send.py`: receives the rendered output and transmits it to the MJ-5890K via
-  `python-escpos`. This is the only module with hardware I/O.
+- `send.py`: encodes the rendered instructions as raw ESC/POS bytes and writes them
+  directly to the device file (e.g. `/dev/usb/lp0`). This is the only module with hardware I/O.
 
 ### `kamir/cli.py`
 Parses arguments, loads config, and wires subsystems together. No business logic.
@@ -232,7 +231,6 @@ auto_print = false          # if true, skip confirmation prompt
 
 [printer]
 device     = "/dev/usb/lp0" # USB path to MJ-5890K on Raspberry Pi
-profile    = "MJ-5890K"     # python-escpos printer profile
 
 [sets]
 allowed = [
@@ -245,7 +243,7 @@ allowed = [
 
 ## Phased Implementation Plan
 
-### Phase 1 — Database Builder (revised)
+### Phase 1 — Database Builder ✅
 Scope: introduce the `Card` domain model, revise filter logic to produce `Card` objects,
 ensure tests pass.
 
@@ -257,7 +255,7 @@ ensure tests pass.
 - Remove `kamir/images/`, `kamir/render/`, and related dependencies from `pyproject.toml`.
 - Milestone: `kamir build-db` produces a correct `kamir_cardpool.sqlite`.
 
-### Phase 2 — Play App
+### Phase 2 — Play App ✅
 Scope: interactive creature selection and terminal display.
 
 - Add `kamir/play/select.py` with `select_creature(db_path, mana_value, rng)`.
@@ -265,14 +263,14 @@ Scope: interactive creature selection and terminal display.
 - Add `kamir play` command to `kamir/cli.py` (interactive loop).
 - Milestone: `kamir play` allows selecting cards and displays them; no printer yet.
 
-### Phase 3 — Printing
+### Phase 3 — Printing ✅
 Scope: ESC/POS text rendering and MJ-5890K integration.
 
 - Add `kamir/printer/render.py` with `render_card(card) -> list[Instruction]`.
-- Add `kamir/printer/send.py` with `print_card(card, device, profile)`.
+- Add `kamir/printer/send.py` with `print_card(card, device)`.
 - Wire play loop to printer in `kamir/cli.py`.
 - Add `kamir print-test --mv X` command for standalone hardware testing.
-- Add `python-escpos` to `pyproject.toml`.
+- Raw ESC/POS bytes written directly to the device file; no additional library needed.
 - Milestone: `kamir play` prints a card slip on the MJ-5890K after each selection.
 
 ### Phase 4 — Hardware Integration & Polish

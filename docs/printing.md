@@ -19,36 +19,6 @@ On Raspberry Pi OS, the printer is accessible without a CUPS driver. The raw USB
 
 ---
 
-## Python Library: `python-escpos`
-
-Kamir uses the `python-escpos` library to send ESC/POS commands to the MJ-5890K.
-
-```toml
-# pyproject.toml
-[project]
-dependencies = [
-    "python-escpos>=3.0",
-]
-```
-
-The library handles:
-- USB device discovery and connection
-- Text encoding (Code Page 437 by default; UTF-8 with some printers)
-- Text formatting: bold, underline, alignment (left / center / right)
-- Font size selection (Font A normal, Font A double-width, Font B)
-- Paper cut commands (full cut or partial cut)
-
-Connection example:
-```python
-from escpos.printer import Usb
-p = Usb(idVendor=0x..., idProduct=0x..., profile="MJ-5890K")
-```
-
-The exact USB vendor and product IDs for the MJ-5890K are stored in `config.toml`.
-If a named profile is not available in `python-escpos`, a generic ESC/POS profile is used.
-
----
-
 ## Printed Card Layout
 
 The printed slip is a **re-composed text representation** of the card. It is not a copy of
@@ -140,12 +110,10 @@ by three or more creatures.
    ```bash
    sudo usermod -aG lp $USER
    ```
-4. Update `config.toml` with the correct device path and USB IDs:
+4. Update `config.toml` with the correct device path:
    ```toml
    [printer]
-   device     = "/dev/usb/lp0"
-   usb_vendor = 0x0416    # replace with actual vendor ID from lsusb
-   usb_product = 0x5011   # replace with actual product ID from lsusb
+   device = "/dev/usb/lp0"
    ```
 5. Test the connection:
    ```bash
