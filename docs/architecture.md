@@ -14,9 +14,8 @@
 | Testing | `pytest` + `pytest-mock` | Standard; easy fixture support |
 
 Removed from the previous scope:
-- `Pillow` — no image processing needed in the play path
 - `ReportLab` — PDF generation removed; ESC/POS text output replaces it
-- `requests` — no Scryfall API calls during gameplay
+- `requests` — Scryfall API is called via stdlib `urllib` only (during `build-db`)
 
 ---
 
@@ -105,11 +104,12 @@ kamir-rewrite/
 │   ├── __init__.py
 │   ├── __main__.py
 │   ├── cli.py              # Argument parsing; wires subsystems together
-│   ├── config.py           # Load and validate config.toml
+│   ├── config.py           # Load config.toml
 │   ├── domain.py           # Card dataclass (shared by all subsystems)
 │   ├── db/
 │   │   ├── __init__.py
-│   │   ├── load.py         # Open AllPrintings.sqlite; return raw dicts
+│   │   ├── art.py          # Fetch card art from Scryfall; store/load raster blobs
+│   │   ├── load.py         # Open AllPrintings.sqlite; iter raw dicts; all_set_codes()
 │   │   └── write.py        # Create and populate kamir_cardpool.sqlite
 │   ├── filter/
 │   │   ├── __init__.py
@@ -118,31 +118,37 @@ kamir-rewrite/
 │   │   ├── __init__.py
 │   │   ├── select.py       # Query card pool by mana value; return random Card
 │   │   └── display.py      # Format Card for terminal output
-│   └── printer/
+│   ├── printer/
+│   │   ├── __init__.py
+│   │   ├── image.py        # Resize/dither card art to ESC/POS RasterImage
+│   │   ├── render.py       # Compose ESC/POS instruction list from Card
+│   │   └── send.py         # Encode instructions to bytes; write to MJ-5890K
+│   └── utils/
 │       ├── __init__.py
-│       ├── render.py       # Compose ESC/POS instruction list from Card
-│       ├── image.py        # Fetch card art from Scryfall; convert to ESC/POS raster
-│       └── send.py         # Encode instructions to bytes; write to MJ-5890K
+│       └── log.py          # Logging setup
 ├── data/
 │   └── db/                 # AllPrintings.sqlite + kamir_cardpool.sqlite
 ├── logs/
 │   └── kamir.log
 └── tests/
     ├── conftest.py
+    ├── test_db.py          # Unit tests for db/write.py + db/load.py
+    ├── test_db_art.py      # Unit tests for db/art.py
+    ├── test_display.py     # Unit tests for play/display.py
     ├── test_filter.py      # Unit tests for kamir/filter/cards.py
-    ├── test_select.py      # Unit tests for play/select.py (mock DB)
-    ├── test_render.py      # Unit tests for printer/render.py (text output)
-    └── test_db.py          # Unit tests for db/write.py (in-memory SQLite)
+    ├── test_image.py       # Unit tests for printer/image.py
+    ├── test_render.py      # Unit tests for printer/render.py
+    ├── test_select.py      # Unit tests for play/select.py
+    └── test_send.py        # Unit tests for printer/send.py
 ```
 
 ### Modules Removed from the Previous Design
 
 | Module | Reason for removal |
 |---|---|
-| `kamir/images/` | No artwork is fetched during gameplay |
+| `kamir/images/` | Replaced by `kamir/db/art.py` + `kamir/printer/image.py` |
 | `kamir/render/pdf.py` | PDF rendering replaced by ESC/POS text output |
 | `kamir/render/layout.py` | Layout constants specific to the removed PDF renderer |
-| `kamir/utils/progress.py` | Deleted — never called anywhere |
 
 ---
 
@@ -153,9 +159,12 @@ Defines the `Card` frozen dataclass. No logic, no I/O. Imported by all other mod
 
 ### `kamir/db/`
 - `load.py`: opens `AllPrintings.sqlite` in read-only mode; returns raw `dict` rows.
+  Also provides `all_set_codes()` to derive the full physical-play set list from the DB.
   No filtering logic here.
+- `art.py`: fetches card art from the Scryfall API during `build-db`; stores and loads
+  pre-rendered ESC/POS raster blobs in `kamir_cardpool.sqlite`.
 - `write.py`: creates `kamir_cardpool.sqlite`; writes `Card` objects as rows.
-  Idempotent (drops and recreates tables on each run).
+  Preserves existing data by default; pass `force=True` to drop and recreate.
 
 ### `kamir/filter/`
 Pure functions only. Input: raw `dict` rows from MTGJSON. Output: `Card` objects or booleans.
@@ -204,6 +213,9 @@ AllPrintings.sqlite
         │
         ▼
    db/write.py         kamir_cardpool.sqlite
+        │
+        ▼
+    db/art.py          Scryfall API → ESC/POS raster blobs → kamir_cardpool.sqlite
 ```
 
 ### Play Loop (game time)
@@ -305,6 +317,8 @@ are pure functions. This makes them independently testable without hardware or d
 `select.py` accepts a `random.Random` instance rather than calling `random.choice` directly.
 This allows tests to use a fixed seed for deterministic assertions.
 
-**5. No artwork fetching in the play path.**
-Scryfall image fetching (the previous `kamir/images/` module) is removed entirely.
-The printed card is a text re-render, not an image of the original card frame.
+**5. Artwork fetched at build time, not at play time.**
+Scryfall `art_crop` images are downloaded during `kamir build-db` and cached as
+pre-rendered ESC/POS raster blobs in `kamir_cardpool.sqlite`. During gameplay, the
+raster blob is read from the DB and sent to the printer with no network access.
+The printed card shows the art crop followed by the text re-render.
