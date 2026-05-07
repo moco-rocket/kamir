@@ -8,6 +8,7 @@ from kamir.db.write import create_kamir_db, insert_cards
 from kamir.filter.cards import filter_cards
 from kamir.play.display import format_card
 from kamir.play.select import select_creature
+from kamir.printer.send import print_card
 from kamir.utils import log as log_mod
 
 log = logging.getLogger(__name__)
@@ -40,6 +41,7 @@ def stage_build_db(cfg: dict) -> None:
 
 def stage_play(cfg: dict) -> None:
     db_path = cfg["paths"]["kamir_db"]
+    device = cfg["printer"]["device"]
     auto_print = cfg.get("play", {}).get("auto_print", False)
 
     if not db_path.exists():
@@ -88,9 +90,36 @@ def stage_play(cfg: dict) -> None:
             if confirm != "y":
                 continue
 
-        # Phase 3: printer.send.print_card(card, cfg["printer"])
-        print("  (印刷機能は Phase 3 で実装予定)")
-        print()
+        try:
+            print_card(card, device)
+            log.info("Printed: %s (MV %d)", card.name, card.mana_value)
+        except OSError as e:
+            print(f"  印刷エラー: {e}")
+            log.error("Print failed for '%s': %s", card.name, e)
+
+
+def stage_print_test(cfg: dict, mana_value: int) -> None:
+    db_path = cfg["paths"]["kamir_db"]
+    device = cfg["printer"]["device"]
+
+    if not db_path.exists():
+        print("  カードプールが見つかりません。先に 'kamir build-db' を実行してください。")
+        log.error("Card pool not found at %s.", db_path)
+        return
+
+    card = select_creature(db_path, mana_value)
+    if card is None:
+        print(f"  マナ総量 {mana_value} のクリーチャーはプールに存在しません。")
+        return
+
+    print(format_card(card))
+    print()
+    try:
+        print_card(card, device)
+        log.info("print-test: %s (MV %d) → %s", card.name, card.mana_value, device)
+    except OSError as e:
+        print(f"  印刷エラー: {e}")
+        log.error("print-test failed: %s", e)
 
 
 def main() -> None:
@@ -104,6 +133,8 @@ def main() -> None:
     sub = parser.add_subparsers(dest="command", required=True)
     sub.add_parser("build-db", help="Build kamir_cardpool.sqlite from AllPrintings.sqlite")
     sub.add_parser("play", help="Start an interactive Momir Basic play session")
+    pt = sub.add_parser("print-test", help="Print a random card at a given mana value (hardware test)")
+    pt.add_argument("--mv", type=int, required=True, metavar="N", help="Mana value")
 
     args = parser.parse_args()
 
@@ -117,3 +148,5 @@ def main() -> None:
         stage_build_db(cfg)
     elif args.command == "play":
         stage_play(cfg)
+    elif args.command == "print-test":
+        stage_print_test(cfg, args.mv)
