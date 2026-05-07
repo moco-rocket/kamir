@@ -4,8 +4,8 @@ kamir_db   = "data/db/kamir_cardpool.sqlite"
 log_file   = "logs/kamir.log"
 
 [play]
-# If true, print immediately after selection without a confirmation prompt.
-auto_print = false
+# If false, show a confirmation prompt before printing each card.
+auto_print = true
 
 [printer]
 # USB device path on Raspberry Pi (check with: ls /dev/usb/lp*)
