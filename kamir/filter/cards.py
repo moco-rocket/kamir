@@ -49,7 +49,7 @@ def has_supported_layout(card: dict) -> bool:
     return card.get("layout", "") in SUPPORTED_LAYOUTS
 
 
-def normalize_oracle(text: str) -> str:
+def normalize_oracle(text: str | None) -> str:
     """Strip diacritics and normalize whitespace in oracle text."""
     if not text:
         return ""
@@ -63,7 +63,7 @@ def canonical_name(card: dict) -> str:
     return card.get("asciiName") or card.get("faceName") or card.get("name", "")
 
 
-def wrap_oracle(text: str, width: int = 39) -> str:
+def wrap_oracle(text: str | None, width: int = 39) -> str:
     """Wrap oracle text: double-spaces become paragraph breaks, lines wrap at width."""
     if not text:
         return ""

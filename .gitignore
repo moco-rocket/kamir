@@ -16,5 +16,8 @@ build/
 .venv/
 .python-version
 
+# Claude Code session memory (tooling state, not project source)
+memory/
+
 # OS
 .DS_Store
