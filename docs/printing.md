@@ -28,10 +28,12 @@ during a tabletop game.
 ### Layout Specification
 
 ```
-                                  ← 3 blank lines (leading margin)
+                                  ← 1 blank line (leading margin)
 ================================  ← full-width rule (=)
 FERVENT CHAMPION           {R}    ← name (bold, uppercase) + mana cost (right)
 ================================
+[art raster image, if available]  ← 192-dot-wide 1-bit raster (optional)
+--------------------------------  ← thin rule (only present when art is shown)
 Creature - Human Knight           ← type line
 --------------------------------  ← thin rule (-)
 Haste.
@@ -54,7 +56,9 @@ target Fervent Champion cost
 - **Name**: uppercase, bold, left-aligned. Truncated to fit on one line if necessary.
 - **Mana cost**: right-aligned on the same line as the name.
   If name + mana cost exceed 32 chars, the mana cost moves to its own line.
-- **Type line**: normal weight, below the header rule.
+- **Art**: when available, a 1-bit raster image is printed immediately after the header
+  rule, followed by a thin rule (`-`). See [Art Raster](#art-raster) below.
+- **Type line**: normal weight, below the art (or directly below the header rule if no art).
 - **Oracle text**: normal weight, word-wrapped at 32 chars. Paragraphs separated by a
   blank line. Keyword abilities are listed one per line. MTGJSON stores ability
   separators as the two-character sequence `\n`; these are normalized to line breaks
@@ -66,10 +70,10 @@ target Fervent Champion cost
   (the same notation used in oracle text). No Unicode glyphs are used, as thermal
   printer character encoding support is inconsistent.
 - **Paper cut**: a full cut is issued after 3 blank lines following the closing rule.
-  3 blank lines also precede the opening rule. This margin prevents the paper cutter
-  from clipping text on either edge of the slip.
+  1 blank line precedes the opening rule. This margin prevents the paper cutter
+  from clipping text on the leading edge of the slip.
 
-### Example Output (32-char width)
+### Example Output (32-char width, no art)
 
 ```
 ================================
@@ -79,7 +83,23 @@ Creature - Angel
 --------------------------------
 Flying, vigilance
 --------------------------------
-[ALL]                        4/4
+[7ED]                        4/4
+================================
+```
+
+### Example Output (with art)
+
+```
+================================
+SERRA ANGEL            {3}{W}{W}
+================================
+[192-dot-wide raster image]
+--------------------------------
+Creature - Angel
+--------------------------------
+Flying, vigilance
+--------------------------------
+[7ED]                        4/4
 ================================
 ```
 
@@ -99,6 +119,47 @@ by three or more creatures.
 --------------------------------
 [ROE]                      15/15
 ================================
+```
+
+---
+
+## Art Raster
+
+Card art is downloaded from Scryfall's `art_crop` endpoint and stored as a 1-bit raster
+in the card pool database. It is printed using ESC * (8-dot single-density bit image mode).
+
+### How It Works
+
+1. **Download** (`kamir build-db`): `POST /cards/collection` fetches up to 75 cards per
+   batch to resolve `art_crop` URLs. Each image is then downloaded from Scryfall's CDN,
+   converted to a 1-bit raster with Floyd-Steinberg dithering, and stored as a BLOB in
+   `cards.art_raster`.
+2. **Load**: at print time, `load_art()` reads the BLOB and reconstructs a `RasterImage`
+   from the stored bytes (`height = len(blob) // width_bytes`).
+3. **Print**: `_raster_bands()` in `send.py` transposes the row-major raster to the
+   column-major format required by ESC *.
+
+### Raster Dimensions
+
+| Property | Value |
+|---|---|
+| Width | 192 dots (`WIDTH_DOTS`) |
+| Height | `round(96 × orig_h / orig_w / 8) × 8` dots (aspect-ratio preserving, multiple of 8) |
+| Typical height | ~72 dots for a standard Scryfall art_crop (626×457 px) |
+| ESC * command | `ESC * 0 192 0` (m=0 single density, nL=192, nH=0) |
+
+The MJ-5890K's ESC * implementation ignores `nH`, so `WIDTH_DOTS` is kept at 192 (fits
+in `nL` alone). The height calculation uses `WIDTH_DOTS // 2 = 96` as the effective
+reference width because the printer renders 192 columns across its full 384-dot head,
+doubling each column horizontally. Halving the reference width compensates so that
+the printed image matches the source aspect ratio.
+
+### Rebuilding Art After a Code Change
+
+If `WIDTH_DOTS` changes, stored BLOBs become invalid. Rebuild with:
+
+```bash
+kamir build-db --force
 ```
 
 ---

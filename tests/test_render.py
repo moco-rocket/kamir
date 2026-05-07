@@ -80,7 +80,7 @@ class TestRenderCard:
                 leading_blanks += 1
             else:
                 break
-        assert leading_blanks >= 3
+        assert leading_blanks >= 1
 
     def test_trailing_blank_lines_before_cut(self):
         instrs = render_card(_card())
