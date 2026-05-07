@@ -12,10 +12,44 @@ _INIT = _ESC + b"@"          # ESC @ — initialize printer, clear buffer
 _BOLD_ON = _ESC + b"E\x01"
 _BOLD_OFF = _ESC + b"E\x00"
 _CUT_FULL = _GS + b"VA\x00"  # GS V A 0 — full paper cut
-_GS_RASTER = _GS + b"\x76\x30\x00"  # GS v 0 — raster bit image (normal density)
+# ESC * 0 — 8-dot single-density bit image (more widely supported than GS v 0)
+_ESC_STAR = _ESC + b"\x2a\x00"
+_ESC_LINESP_8 = _ESC + b"\x33\x08"  # ESC 3 8 — set line spacing to 8 dots
+_ESC_LINESP_DEF = _ESC + b"\x32"    # ESC 2 — restore default line spacing
+_LF = b"\x0a"
 
 _RULE_THICK = ("=" * 32 + "\n").encode("ascii")
 _RULE_THIN = ("-" * 32 + "\n").encode("ascii")
+
+
+def _raster_bands(instr: RasterImage) -> bytes:
+    """Encode a row-major raster as ESC * 8-dot single-density column bands.
+
+    GS v 0 is not supported by all budget printers; ESC * is universal.
+    The stored raster is row-major (each byte = 8 horizontal dots); ESC *
+    expects column-major within each 8-row band (each byte = 8 vertical dots).
+    """
+    raster = instr.data
+    wb = instr.width_bytes     # bytes per row
+    w = wb * 8                 # dots wide
+    nL, nH = w & 0xFF, w >> 8
+    band_header = _ESC_STAR + bytes([nL, nH])
+
+    out = bytearray(_ESC_LINESP_8)
+    for band in range(instr.height // 8):
+        out += band_header
+        base = band * 8 * wb
+        for c_g in range(wb):       # column group (8 columns per group)
+            rows = [raster[base + d * wb + c_g] for d in range(8)]
+            for k in range(8):      # column within group
+                col_byte = 0
+                shift = 7 - k
+                for d in range(8):  # dot row within band
+                    col_byte |= ((rows[d] >> shift) & 1) << (7 - d)
+                out.append(col_byte)
+        out += _LF
+    out += _ESC_LINESP_DEF
+    return bytes(out)
 
 
 def _encode(instructions: list[Instruction]) -> bytes:
@@ -36,14 +70,7 @@ def _encode(instructions: list[Instruction]) -> bytes:
                     f"RasterImage data {len(instr.data)} B != "
                     f"width_bytes*height={expected} B — re-run 'kamir build-db --force'"
                 )
-            buf += _GS_RASTER
-            buf += bytes([
-                instr.width_bytes & 0xFF,
-                (instr.width_bytes >> 8) & 0xFF,
-                instr.height & 0xFF,
-                (instr.height >> 8) & 0xFF,
-            ])
-            buf += instr.data
+            buf += _raster_bands(instr)
         elif isinstance(instr, Cut):
             buf += _CUT_FULL
     return bytes(buf)

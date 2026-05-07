@@ -1,6 +1,6 @@
 from kamir.domain import Card
 from kamir.printer.render import RasterImage, render_card
-from kamir.printer.send import _encode, _BOLD_ON, _CUT_FULL, _GS_RASTER, _INIT, print_card
+from kamir.printer.send import _encode, _BOLD_ON, _CUT_FULL, _ESC_STAR, _INIT, print_card
 
 
 def _card(**overrides) -> Card:
@@ -45,8 +45,8 @@ class TestEncode:
     def test_raster_image_encoded(self):
         art = RasterImage(data=bytes(48 * 192), width_bytes=48, height=192)
         data = _encode(render_card(_card(), art))
-        assert _GS_RASTER in data
-        assert bytes([48, 0, 192, 0]) in data  # width_bytes + height header
+        # ESC * 0 nL=128 nH=1 — 8-dot single density, 384 dots wide
+        assert _ESC_STAR + bytes([128, 1]) in data
 
 
 class TestPrintCard:
@@ -69,4 +69,4 @@ class TestPrintCard:
         device = tmp_path / "fake_printer"
         device.touch()
         print_card(_card(), str(device), art)
-        assert _GS_RASTER in device.read_bytes()
+        assert _ESC_STAR in device.read_bytes()
