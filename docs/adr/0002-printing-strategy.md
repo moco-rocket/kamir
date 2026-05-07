@@ -105,11 +105,11 @@ In summary:
 
 ## Consequences
 
-- No additional runtime dependency is added; only stdlib `open()` and raw bytes are needed.
 - `kamir/printer/render.py` contains the pure text layout logic (returns `list[Instruction]`).
 - `kamir/printer/send.py` encodes instructions to ESC/POS bytes and writes them to the device file.
-- `config.toml` gains a `[printer]` section with a single `device` key (device file path).
-- No Scryfall API calls occur during gameplay.
-- No artwork images are stored on disk.
-- `Pillow`, `ReportLab`, and `requests` are removed from the runtime dependency set.
+- `kamir/printer/image.py` resizes/dithers card art to an ESC/POS raster (uses `Pillow`).
+- `config.toml` gains a `[printer]` section with a `device` key (device file path).
+- No Scryfall API calls occur during gameplay; art is pre-fetched during `kamir build-db`.
+- Art is cached as ESC/POS raster blobs in `kamir_cardpool.sqlite` (not as image files on disk).
+- `ReportLab` and `requests` are removed. `Pillow` is retained for art processing.
 - The hardware setup step is `uv sync` + USB plug-in + one config entry; no CUPS required.

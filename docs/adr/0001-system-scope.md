@@ -86,7 +86,7 @@ The database builder is retained as a setup step. Everything else is rebuilt:
 - `kamir/play/` is added.
 - `kamir/printer/` gains ESC/POS rendering and hardware I/O (previously a stub).
 - `kamir/domain.py` is added as the shared `Card` dataclass.
-- `pyproject.toml` loses `requests`, `Pillow`, `ReportLab`; gains `python-escpos`.
+- `pyproject.toml` loses `requests`, `ReportLab`; gains `Pillow` (art processing) and `tqdm` (progress display). ESC/POS bytes are written via raw file I/O — no `python-escpos` library.
 - The CLI changes: `build-db` is retained; `fetch-images` and `make-pdfs` are removed;
   `play` and `print-test` are added.
 - `config.toml` loses `[image]`, `[pdf]`, and `[scryfall]` sections; gains `[printer]`.

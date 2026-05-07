@@ -56,10 +56,13 @@ The play app is the primary user-facing feature.
 
 ### F3 — Printing/Rendering
 
-The printed output is a readable re-composition of card information, **not** a copy of the
-original card artwork or frame.
+The printed output combines a card art crop with a text re-composition of card information.
+It is **not** a copy of the original card frame.
 
-- Compose a text-based card layout from the selected creature's data:
+- During `build-db`: fetch the `art_crop` image from the Scryfall API and store it as a
+  pre-rendered ESC/POS raster blob in `kamir_cardpool.sqlite`.
+- During play: read the cached raster blob and send it to the printer with no network access.
+- Compose and print a text-based card layout:
   - Card name (bold, prominent)
   - Mana cost
   - Type line
@@ -68,7 +71,6 @@ original card artwork or frame.
 - Send the composed layout to the MJ-5890K thermal printer via ESC/POS protocol.
 - The layout must be readable during a tabletop game at arm's length.
 - Paper usage per card: minimal (a few centimetres of 58mm receipt paper).
-- No artwork is fetched, stored, or printed.
 
 ### F4 — CLI
 
