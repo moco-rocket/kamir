@@ -102,9 +102,7 @@ log_file   = "logs/kamir.log"
 auto_print = false  # true にすると確認なしに即印刷
 
 [printer]
-device      = "/dev/usb/lp0"   # Raspberry Pi でのUSBデバイスパス
-usb_vendor  = 0x0000            # lsusb で確認
-usb_product = 0x0000
+device = "/dev/usb/lp0"  # Raspberry Pi でのUSBデバイスパス（ls /dev/usb/lp* で確認）
 
 [sets]
 # allowed = "all" で AllPrintings.sqlite 内の全物理プレイ対象セットを自動収録

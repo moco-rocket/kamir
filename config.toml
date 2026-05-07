@@ -9,10 +9,7 @@ auto_print = false
 
 [printer]
 # USB device path on Raspberry Pi (check with: ls /dev/usb/lp*)
-device      = "/dev/usb/lp0"
-# USB vendor and product IDs for MJ-5890K (check with: lsusb)
-usb_vendor  = 0x0000
-usb_product = 0x0000
+device = "/dev/usb/lp0"
 
 [sets]
 # Set allowed = "all" to include every physical-play set in AllPrintings.sqlite
