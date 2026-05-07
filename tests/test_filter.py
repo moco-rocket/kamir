@@ -134,6 +134,10 @@ class TestWrapOracle:
     def test_double_space_becomes_paragraph_break(self):
         assert "\n" in wrap_oracle("Flying  Haste")
 
+    def test_literal_backslash_n_becomes_paragraph_break(self):
+        result = wrap_oracle("Flying\\nHaste")
+        assert result == "Flying\nHaste"
+
     def test_empty(self):
         assert wrap_oracle("") == ""
 

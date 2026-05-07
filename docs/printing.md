@@ -28,6 +28,7 @@ during a tabletop game.
 ### Layout Specification
 
 ```
+                                  ← 3 blank lines (leading margin)
 ================================  ← full-width rule (=)
 FERVENT CHAMPION           {R}    ← name (bold, uppercase) + mana cost (right)
 ================================
@@ -44,7 +45,7 @@ target Fervent Champion cost
 --------------------------------
 [ELD]                        1/1  ← expansion + P/T (bold, right-aligned)
 ================================  ← closing rule
-                                  ← one blank line before paper cut
+                                  ← 3 blank lines before paper cut
 ```
 
 ### Design Rules
@@ -55,14 +56,18 @@ target Fervent Champion cost
   If name + mana cost exceed 32 chars, the mana cost moves to its own line.
 - **Type line**: normal weight, below the header rule.
 - **Oracle text**: normal weight, word-wrapped at 32 chars. Paragraphs separated by a
-  blank line. Keyword abilities are listed one per line.
+  blank line. Keyword abilities are listed one per line. MTGJSON stores ability
+  separators as the two-character sequence `\n`; these are normalized to line breaks
+  before rendering.
 - **P/T**: bold, right-aligned on the bottom line with the expansion code left-aligned.
   Format: `N/N`.
 - **Rules**: `=` lines use the full width; `-` lines use the full width.
 - **Mana symbols**: rendered as `{W}`, `{U}`, `{B}`, `{R}`, `{G}`, `{X}`, etc.
   (the same notation used in oracle text). No Unicode glyphs are used, as thermal
   printer character encoding support is inconsistent.
-- **Paper cut**: a full cut is issued after the closing rule and a blank line.
+- **Paper cut**: a full cut is issued after 3 blank lines following the closing rule.
+  3 blank lines also precede the opening rule. This margin prevents the paper cutter
+  from clipping text on either edge of the slip.
 
 ### Example Output (32-char width)
 
