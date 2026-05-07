@@ -226,9 +226,6 @@ mtgjson_db = "data/db/AllPrintings.sqlite"
 kamir_db   = "data/db/kamir_cardpool.sqlite"
 log_file   = "logs/kamir.log"
 
-[play]
-auto_print = false          # if true, skip confirmation prompt
-
 [printer]
 device     = "/dev/usb/lp0" # USB path to MJ-5890K on Raspberry Pi
 
