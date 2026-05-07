@@ -5,7 +5,7 @@ from pathlib import Path
 from kamir.domain import Card
 
 _CREATE_CARDS = """
-CREATE TABLE cards (
+CREATE TABLE IF NOT EXISTS cards (
     name             TEXT PRIMARY KEY,
     mana_value       INTEGER,
     mana_cost        TEXT,
@@ -25,7 +25,6 @@ def create_kamir_db(path: Path) -> sqlite3.Connection:
     path.parent.mkdir(parents=True, exist_ok=True)
     conn = sqlite3.connect(path)
     cur = conn.cursor()
-    cur.execute("DROP TABLE IF EXISTS cards")
     cur.execute(_CREATE_CARDS)
     conn.commit()
     return conn

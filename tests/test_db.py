@@ -37,7 +37,9 @@ class TestCreateKamirDb:
         tables = {row[0] for row in cur.fetchall()}
         assert "cards" in tables
 
-    def test_idempotent_recreation(self, tmp_path):
+    def test_preserves_existing_rows_on_reopen(self, tmp_path):
+        # Calling create_kamir_db on an existing DB must not wipe stored data
+        # (art_raster blobs in particular would otherwise be lost on every rebuild).
         path = tmp_path / "test.sqlite"
         conn1 = create_kamir_db(path)
         insert_cards(conn1, [_sample_card()])
@@ -46,7 +48,7 @@ class TestCreateKamirDb:
         conn2 = create_kamir_db(path)
         cur = conn2.cursor()
         cur.execute("SELECT COUNT(*) FROM cards")
-        assert cur.fetchone()[0] == 0
+        assert cur.fetchone()[0] == 1
         conn2.close()
 
 
