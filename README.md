@@ -7,10 +7,13 @@ MJ-5890Kサーマルプリンターにカード情報を印刷します。印刷
 
 ## 動作環境
 
-- Raspberry Pi OS Bookworm (64-bit) ヘッドレス、または macOS / Linux
+- Raspberry Pi OS Bookworm (64-bit) ヘッドレス
 - Python 3.11 以上
 - [uv](https://docs.astral.sh/uv/) (パッケージ管理)
 - MJ-5890K サーマルプリンター (USB接続)
+
+> **Note**: `kamir build-db` / `kamir play` はデータ確認や開発目的で macOS / Linux でも動作しますが、
+> プリンターへの出力は Linux (`/dev/usb/lp*`) 専用です。
 
 ## セットアップ
 
@@ -50,6 +53,39 @@ Raspberry Pi で常用する場合は `~/.bashrc` に以下を追記するか、
 # ~/.bashrc に追記する場合（KAMIR_DIR はリポジトリのパスに合わせて変更）
 export PATH="$HOME/kamir/.venv/bin:$PATH"
 ```
+
+## Raspberry Pi ハードウェア準備
+
+プリンターを使う前に、以下をRaspberry Pi上で一度だけ実行してください。
+
+**1. プリンターをUSBで接続し、デバイスを確認する**
+
+```bash
+ls /dev/usb/lp*
+# → /dev/usb/lp0 などが表示されれば認識されている
+```
+
+**2. ユーザーに印刷デバイスへのアクセス権を付与する**
+
+```bash
+sudo usermod -aG lp $USER
+```
+
+設定を反映するため、一度ログアウトして再ログインしてください。
+
+**3. `config.toml` のデバイスパスを確認する**
+
+`config.toml` の `[printer] device` が上記で確認したパスと一致していることを確かめてください。
+
+**4. 動作確認**
+
+```bash
+kamir print-test --mv 4
+```
+
+詳細は [docs/printing.md](docs/printing.md) を参照してください。
+
+---
 
 ## 使い方
 
