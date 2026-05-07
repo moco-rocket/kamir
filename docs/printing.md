@@ -120,7 +120,7 @@ by three or more creatures.
    ```bash
    mkdir -p data/db
    mv AllPrintings.sqlite data/db/
-   uv run kamir build-db
+   kamir build-db
    ```
 5. Connect the MJ-5890K to the Raspberry Pi via USB.
 6. Verify the device is recognized:
@@ -134,7 +134,7 @@ by three or more creatures.
    ```
 8. Test the connection:
    ```bash
-   uv run kamir print-test --mv 4
+   kamir print-test --mv 4
    ```
 
 ---
