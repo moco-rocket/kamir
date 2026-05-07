@@ -6,136 +6,215 @@
 |---|---|---|
 | Language | Python 3.11+ | Ecosystem, RPi compatibility |
 | Dependency management | uv | Fast, reproducible, lockfile-based |
-| Image processing | Pillow (PIL) | Lightweight; no OpenCV needed on RPi |
-| PDF generation | ReportLab | Proven; fine-grained layout control |
 | Database | SQLite (stdlib `sqlite3`) | No server; file-based; ships with Python |
-| CLI | `argparse` (stdlib) | No extra dependency; sufficient for this tool |
+| CLI | `argparse` (stdlib) | No extra dependency |
 | Progress display | `tqdm` | Lightweight; works in headless terminals |
-| Configuration | `tomllib` (stdlib, 3.11+) + `config.toml` | No extra dependency |
+| Configuration | `tomllib` (stdlib 3.11+) + `config.toml` | No extra dependency |
+| Thermal printing | `python-escpos` | ESC/POS support for MJ-5890K; USB and serial |
 | Testing | `pytest` + `pytest-mock` | Standard; easy fixture support |
+
+Removed from the previous scope:
+- `Pillow` — no image processing needed in the play path
+- `ReportLab` — PDF generation removed; ESC/POS text output replaces it
+- `requests` — no Scryfall API calls during gameplay
 
 ---
 
-## Directory Layout
+## Subsystem Split
+
+Kamir is divided into three subsystems. Each subsystem has a distinct runtime context and
+operator. They communicate only through the shared SQLite database and the shared domain model.
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│  Subsystem 1: Database Builder                                   │
+│  Run once (setup). Operator: system owner.                       │
+│  Input:  AllPrintings.sqlite (manual download)                   │
+│  Output: kamir_cardpool.sqlite                                   │
+│  Modules: kamir/db/, kamir/filter/                               │
+└──────────────────────────┬──────────────────────────────────────┘
+                           │  kamir_cardpool.sqlite
+                           ▼
+┌─────────────────────────────────────────────────────────────────┐
+│  Subsystem 2: Play App                                           │
+│  Run during a game session. Operator: player.                    │
+│  Input:  mana value (integer, from player)                       │
+│  Output: selected Card (to terminal + printer trigger)           │
+│  Modules: kamir/play/                                            │
+└──────────────────────────┬──────────────────────────────────────┘
+                           │  Card (domain object)
+                           ▼
+┌─────────────────────────────────────────────────────────────────┐
+│  Subsystem 3: Printing/Rendering                                 │
+│  On-demand, triggered by Play App.                               │
+│  Input:  Card (domain object)                                    │
+│  Output: ESC/POS bytes → MJ-5890K thermal printer               │
+│  Modules: kamir/printer/                                         │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+---
+
+## Shared Domain Model
+
+All three subsystems exchange data using a single `Card` dataclass defined in `kamir/domain.py`.
+No subsystem passes raw `dict` rows to another subsystem.
+
+```python
+@dataclass(frozen=True)
+class Card:
+    name: str
+    mana_value: int
+    mana_cost: str
+    type_line: str
+    oracle_text: str
+    power: str
+    toughness: str
+    expansion: str
+    collector_number: str
+    layout: str
+```
+
+The database builder produces `Card` objects. The play app selects `Card` objects from the
+database. The printer/renderer accepts a `Card` object and formats it for output.
+
+---
+
+## Repository Structure
+
+Kamir remains a **single repository**. See the decision rationale in
+[`docs/adr/0001-system-scope.md`](adr/0001-system-scope.md).
+
+### Target Directory Layout
 
 ```
 kamir-rewrite/
-├── pyproject.toml            # Project metadata and dependencies (uv)
-├── uv.lock                   # Locked dependency tree
-├── config.toml               # Runtime configuration (paths, sets, API settings)
-├── CLAUDE.md                 # Claude Code project rules
+├── pyproject.toml
+├── uv.lock
+├── config.toml
+├── CLAUDE.md
 ├── docs/
 │   ├── requirements.md
-│   └── architecture.md
+│   ├── architecture.md
+│   ├── rules-note.md
+│   ├── printing.md
+│   └── adr/
+│       ├── 0001-system-scope.md
+│       └── 0002-printing-strategy.md
 ├── kamir/
 │   ├── __init__.py
-│   ├── __main__.py           # `python -m kamir` entry point
-│   ├── cli.py                # Argument parsing and stage dispatch
-│   ├── config.py             # Load and validate config.toml
+│   ├── __main__.py
+│   ├── cli.py              # Argument parsing; wires subsystems together
+│   ├── config.py           # Load and validate config.toml
+│   ├── domain.py           # Card dataclass (shared by all subsystems)
 │   ├── db/
 │   │   ├── __init__.py
-│   │   ├── load.py           # Open AllPrintings.sqlite; raw queries
-│   │   └── write.py          # Create and populate kamir_cardpool.sqlite
+│   │   ├── load.py         # Open AllPrintings.sqlite; return raw dicts
+│   │   └── write.py        # Create and populate kamir_cardpool.sqlite
 │   ├── filter/
 │   │   ├── __init__.py
-│   │   └── cards.py          # Pure functions: is_creature(), allowed_set(), select_face(), …
-│   ├── images/
+│   │   └── cards.py        # Pure functions: is_creature(), filter_cards(), …
+│   ├── play/
 │   │   ├── __init__.py
-│   │   ├── fetch.py          # Scryfall HTTP fetch + retry logic
-│   │   ├── cache.py          # Check / store / read local image cache
-│   │   └── process.py        # Grayscale, resize, crop (Pillow only)
-│   ├── render/
-│   │   ├── __init__.py
-│   │   ├── layout.py         # Card layout constants and coordinate helpers
-│   │   └── pdf.py            # ReportLab PDF generation per card
-│   ├── printer/
-│   │   ├── __init__.py
-│   │   └── send.py           # Send PDF to system printer (future)
-│   └── utils/
+│   │   ├── select.py       # Query card pool by mana value; return random Card
+│   │   └── display.py      # Format Card for terminal output
+│   └── printer/
 │       ├── __init__.py
-│       ├── log.py            # Logging setup (file + stdout)
-│       └── progress.py       # tqdm wrapper
+│       ├── render.py       # Compose ESC/POS text layout from Card
+│       └── send.py         # Send ESC/POS bytes to MJ-5890K
 ├── data/
-│   ├── db/                   # AllPrintings.sqlite (manual download) + kamir_cardpool.sqlite
-│   ├── img/                  # {mana_value}/{card_id}.jpg
-│   └── pdf/                  # {mana_value}/{card_id}.pdf
-├── resources/
-│   └── no_image.jpg          # Placeholder for failed image fetches
+│   └── db/                 # AllPrintings.sqlite + kamir_cardpool.sqlite
 ├── logs/
-│   └── kamir.log             # Structured run log
+│   └── kamir.log
 └── tests/
-    ├── conftest.py           # Shared fixtures (in-memory SQLite, sample card dicts)
-    ├── test_filter.py        # Unit tests for kamir/filter/cards.py
-    ├── test_process.py       # Unit tests for image processing (no network)
-    ├── test_render.py        # Unit tests for PDF layout helpers
-    └── test_db.py            # Unit tests for DB write logic (in-memory SQLite)
+    ├── conftest.py
+    ├── test_filter.py      # Unit tests for kamir/filter/cards.py
+    ├── test_select.py      # Unit tests for play/select.py (mock DB)
+    ├── test_render.py      # Unit tests for printer/render.py (text output)
+    └── test_db.py          # Unit tests for db/write.py (in-memory SQLite)
 ```
+
+### Modules Removed from the Previous Design
+
+| Module | Reason for removal |
+|---|---|
+| `kamir/images/` | No artwork is fetched during gameplay |
+| `kamir/render/pdf.py` | PDF rendering replaced by ESC/POS text output |
+| `kamir/render/layout.py` | Layout constants specific to the removed PDF renderer |
+| `kamir/utils/progress.py` | Merged into cli.py or kept only for build-db stage |
 
 ---
 
 ## Module Responsibilities
 
-### `kamir/db/`
-Owns all interaction with SQLite files.
+### `kamir/domain.py`
+Defines the `Card` frozen dataclass. No logic, no I/O. Imported by all other modules.
 
-- `load.py`: Opens `AllPrintings.sqlite` in read-only mode; exposes query helpers that return plain `dict` rows. No filtering logic here.
-- `write.py`: Creates `kamir_cardpool.sqlite`; writes rows produced by the filter layer. Idempotent (drops and recreates tables on each run).
+### `kamir/db/`
+- `load.py`: opens `AllPrintings.sqlite` in read-only mode; returns raw `dict` rows.
+  No filtering logic here.
+- `write.py`: creates `kamir_cardpool.sqlite`; writes `Card` objects as rows.
+  Idempotent (drops and recreates tables on each run).
 
 ### `kamir/filter/`
-Pure functions only. Receives data as dicts, returns bools or transformed dicts. No I/O.
+Pure functions only. Input: raw `dict` rows from MTGJSON. Output: `Card` objects or booleans.
 
 - `is_creature(card: dict) -> bool`
 - `is_allowed_set(card: dict, allowed_sets: set[str]) -> bool`
+- `is_front_face(card: dict) -> bool`
 - `has_valid_collector_number(card: dict) -> bool`
-- `select_face(card: dict) -> dict` — picks the correct face for DFC cards
-- `normalize_oracle(text: str) -> str` — strips diacritics, normalizes whitespace
+- `is_within_base_set(card: dict) -> bool`
+- `is_funny(card: dict) -> bool`
+- `is_reprint(card: dict) -> bool`
+- `has_supported_layout(card: dict) -> bool`
+- `to_card(card: dict) -> Card` — convert passing dict to a `Card`
+- `filter_cards(raw: list[dict], allowed: set[str]) -> list[Card]`
 
-### `kamir/images/`
-Owns Scryfall communication and the local image cache.
+### `kamir/play/`
+- `select.py`: queries `kamir_cardpool.sqlite` for cards at a given mana value;
+  returns one uniformly random `Card`. Accepts an injectable random source for testing.
+- `display.py`: formats a `Card` as a multi-line terminal string. Pure function.
 
-- `fetch.py`: Constructs Scryfall URLs, makes HTTP requests with retry/backoff, respects rate limits. Returns raw bytes.
-- `cache.py`: Determines the local path for a card's image; checks existence; writes processed bytes to disk.
-- `process.py`: Pure image transformation (Pillow): grayscale → resize → crop. Input: bytes. Output: bytes.
-
-### `kamir/render/`
-Owns PDF layout. Does not access the network or the database directly.
-
-- `layout.py`: Named constants for dimensions, margins, font sizes, coordinate offsets.
-- `pdf.py`: Accepts a card dict + image bytes → produces a PDF bytes object via ReportLab. Text wrapping and dynamic font sizing live here.
-
-### `kamir/printer/` (future)
-Shells out to `lp` or equivalent to send a PDF to the system printer. Kept isolated so it can be swapped or mocked easily.
+### `kamir/printer/`
+- `render.py`: converts a `Card` into an ordered list of ESC/POS instructions
+  (text segments with formatting directives). Pure function; no hardware dependency.
+- `send.py`: receives the rendered output and transmits it to the MJ-5890K via
+  `python-escpos`. This is the only module with hardware I/O.
 
 ### `kamir/cli.py`
-Parses arguments, loads config, wires stages together, manages progress bars and logging. Contains no business logic.
+Parses arguments, loads config, and wires subsystems together. No business logic.
 
 ---
 
 ## Data Flow
 
+### Database Builder (setup)
 ```
 AllPrintings.sqlite
         │
         ▼
-   db/load.py          (raw card rows as dicts)
+   db/load.py          raw dict rows
         │
         ▼
-  filter/cards.py      (pure functions → filtered card list)
+  filter/cards.py      Card objects
         │
         ▼
-   db/write.py         (persist to kamir_cardpool.sqlite)
+   db/write.py         kamir_cardpool.sqlite
+```
+
+### Play Loop (game time)
+```
+Player input (mana value)
         │
         ▼
-  images/fetch.py      (Scryfall API → raw bytes)
-  images/process.py    (bytes → processed bytes)
-  images/cache.py      (write to data/img/)
+  play/select.py       random Card from kamir_cardpool.sqlite
         │
-        ▼
-  render/pdf.py        (card dict + image bytes → PDF bytes)
-  render/             (write to data/pdf/)
+        ├──► play/display.py    → terminal output
         │
-        ▼
-  printer/send.py      (future: lp / CUPS)
+        └──► printer/render.py  → ESC/POS layout
+                  │
+                  ▼
+             printer/send.py    → MJ-5890K
 ```
 
 ---
@@ -144,49 +223,88 @@ AllPrintings.sqlite
 
 ```toml
 [paths]
-mtgjson_db  = "data/db/AllPrintings.sqlite"
-kamir_db    = "data/db/kamir_cardpool.sqlite"
-img_dir     = "data/img"
-pdf_dir     = "data/pdf"
-log_file    = "logs/kamir.log"
-placeholder = "resources/no_image.jpg"
+mtgjson_db = "data/db/AllPrintings.sqlite"
+kamir_db   = "data/db/kamir_cardpool.sqlite"
+log_file   = "logs/kamir.log"
 
-[image]
-width  = 100
-height = 171
-# Crop box applied after resize (left, upper, right, lower) on the 223x310 source
-crop   = [26, 47, 197, 147]
+[play]
+auto_print = false          # if true, skip confirmation prompt
 
-[pdf]
-card_width_mm  = 48
-card_height_mm = 67
-
-[scryfall]
-base_url       = "https://api.scryfall.com"
-request_delay  = 1.0   # seconds between requests
+[printer]
+device     = "/dev/usb/lp0" # USB path to MJ-5890K on Raspberry Pi
+profile    = "MJ-5890K"     # python-escpos printer profile
 
 [sets]
 allowed = [
   "LEA", "LEB", "2ED",
-  # ... full list defined here, not in code
+  # ... full list in config.toml, not in code
 ]
 ```
 
 ---
 
+## Phased Implementation Plan
+
+### Phase 1 — Database Builder (revised)
+Scope: introduce the `Card` domain model, revise filter logic to produce `Card` objects,
+ensure tests pass.
+
+- Add `kamir/domain.py` with the `Card` dataclass.
+- Revise `kamir/filter/cards.py`: add `to_card()`, update `filter_cards()` to return
+  `list[Card]`.
+- Revise `kamir/db/write.py` to accept `list[Card]`.
+- Update `kamir/cli.py` to remove image and PDF stages.
+- Remove `kamir/images/`, `kamir/render/`, and related dependencies from `pyproject.toml`.
+- Milestone: `kamir build-db` produces a correct `kamir_cardpool.sqlite`.
+
+### Phase 2 — Play App
+Scope: interactive creature selection and terminal display.
+
+- Add `kamir/play/select.py` with `select_creature(db_path, mana_value, rng)`.
+- Add `kamir/play/display.py` with `format_card(card) -> str`.
+- Add `kamir play` command to `kamir/cli.py` (interactive loop).
+- Milestone: `kamir play` allows selecting cards and displays them; no printer yet.
+
+### Phase 3 — Printing
+Scope: ESC/POS text rendering and MJ-5890K integration.
+
+- Add `kamir/printer/render.py` with `render_card(card) -> list[Instruction]`.
+- Add `kamir/printer/send.py` with `print_card(card, device, profile)`.
+- Wire play loop to printer in `kamir/cli.py`.
+- Add `kamir print-test --mv X` command for standalone hardware testing.
+- Add `python-escpos` to `pyproject.toml`.
+- Milestone: `kamir play` prints a card slip on the MJ-5890K after each selection.
+
+### Phase 4 — Hardware Integration & Polish
+Scope: end-to-end testing on Raspberry Pi, configuration tuning.
+
+- Test full play loop on Raspberry Pi OS Bookworm + MJ-5890K.
+- Tune printer profile, paper cut settings, and character encoding in `config.toml`.
+- Handle edge cases: mana value with zero cards in pool, printer not connected.
+- Optional: GPIO button to trigger play instead of keyboard.
+
+---
+
 ## Key Design Decisions
 
-**1. No OpenCV.**
-The reference implementation uses `cv2` for image processing. On Raspberry Pi, building OpenCV from source or using the ARM wheel is fragile. Pillow handles all required operations (grayscale, resize, crop) with no native dependencies beyond `libjpeg`.
+**1. Single repository.**
+The three subsystems share a domain model and communicate through a single SQLite file.
+Splitting into multiple repos would add packaging and deployment complexity with no benefit
+for a single-operator personal tool on a Raspberry Pi. See ADR-0001.
 
-**2. Pure functions for filtering.**
-Card filtering criteria (set allowlists, layout rules, face selection) change often. Keeping them as pure functions makes them trivially testable and easy to extend without touching I/O code.
+**2. ESC/POS text rendering instead of PDF or bitmap.**
+Thermal printers are optimised for text. A re-composed text layout of name, mana cost,
+type, oracle text, and P/T is more readable on a 58mm slip than a scaled-down card image,
+requires no artwork licensing consideration, and prints in under a second. See ADR-0002.
 
-**3. Idempotent stages.**
-Any stage can be interrupted (power loss, Ctrl-C) and restarted. Each stage checks for existing output before processing a card. The DB build stage is the exception: it always rebuilds from scratch (fast enough to not matter).
+**3. Pure functions for filtering and rendering.**
+Both the card filtering logic (`filter/`) and the card layout rendering (`printer/render.py`)
+are pure functions. This makes them independently testable without hardware or database access.
 
-**4. No database ORM.**
-`sqlite3` from the standard library is sufficient. An ORM would add a dependency and obscure the SQL that matters for understanding the card schema.
+**4. Injected random source.**
+`select.py` accepts a `random.Random` instance rather than calling `random.choice` directly.
+This allows tests to use a fixed seed for deterministic assertions.
 
-**5. Printer integration is isolated from day one.**
-Even though it is out of scope for v1, the `kamir/printer/` package is defined now so that it never bleeds into render or CLI logic later.
+**5. No artwork fetching in the play path.**
+Scryfall image fetching (the previous `kamir/images/` module) is removed entirely.
+The printed card is a text re-render, not an image of the original card frame.
