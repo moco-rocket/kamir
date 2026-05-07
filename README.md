@@ -22,7 +22,7 @@ curl -LsSf https://astral.sh/uv/install.sh | sh
 git clone https://github.com/moco-rocket/kamir.git
 cd kamir
 
-# 依存パッケージをインストール
+# 依存パッケージをインストール（kamir コマンドも .venv/bin/ に生成される）
 uv sync
 
 # AllPrintings.sqlite を mtgjson.com からダウンロードして配置
@@ -33,29 +33,44 @@ mv AllPrintings.sqlite data/db/
 # config.toml を作成（下記「設定」セクション参照）
 
 # カードプールDBを構築（初回のみ）
-uv run kamir build-db
+kamir build-db
+```
+
+`uv sync` を実行すると `.venv/bin/kamir` にエントリーポイントが生成されます。
+仮想環境をアクティベートすることで、以降 `kamir` を直接呼び出せます。
+
+```bash
+source .venv/bin/activate
+```
+
+Raspberry Pi で常用する場合は `~/.bashrc` に以下を追記するか、
+`uv tool install --editable .` でシステム全体にインストールすることもできます。
+
+```bash
+# ~/.bashrc に追記する場合（KAMIR_DIR はリポジトリのパスに合わせて変更）
+export PATH="$HOME/kamir/.venv/bin:$PATH"
 ```
 
 ## 使い方
 
 ```bash
 # カードプールDBを構築（AllPrintings.sqlite から）
-uv run kamir build-db
+kamir build-db
 
 # DBを完全に作り直す（スキーマ変更後やリセット時）
-uv run kamir build-db --force
+kamir build-db --force
 
 # アートのダウンロード状況を確認する
-uv run kamir art-status
+kamir art-status
 
 # ゲームセッション開始
-uv run kamir play
+kamir play
 
 # ハードウェアテスト（マナ総量4のクリーチャーを1枚印刷）
-uv run kamir print-test --mv 4
+kamir print-test --mv 4
 
 # デバッグログを有効にする
-uv run kamir --debug build-db
+kamir --debug build-db
 ```
 
 ## 出力
