@@ -7,7 +7,6 @@ from tqdm import tqdm
 
 from kamir.domain import Card
 from kamir.printer.image import (
-    HEIGHT_DOTS,
     WIDTH_DOTS,
     batch_fetch_art_crop_urls,
     fetch_art_from_url,
@@ -100,19 +99,15 @@ def load_art(db_path: Path, card: Card) -> RasterImage | None:
         ).fetchone()
         if row and row[0] is not None:
             blob = bytes(row[0])
-            expected = (WIDTH_DOTS // 8) * HEIGHT_DOTS
-            if len(blob) != expected:
+            wb = WIDTH_DOTS // 8
+            if len(blob) == 0 or len(blob) % wb != 0:
                 log.warning(
-                    "art_raster for '%s': %d B stored, expected %d B "
+                    "art_raster for '%s': %d B is not a multiple of width_bytes=%d "
                     "— skipping art (re-run 'kamir build-db --force' to fix)",
-                    card.name, len(blob), expected,
+                    card.name, len(blob), wb,
                 )
                 return None
-            return RasterImage(
-                data=blob,
-                width_bytes=WIDTH_DOTS // 8,
-                height=HEIGHT_DOTS,
-            )
+            return RasterImage(data=blob, width_bytes=wb, height=len(blob) // wb)
         return None
     except sqlite3.OperationalError:
         # art_raster column absent — DB was built before art support was added.

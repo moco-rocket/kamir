@@ -26,7 +26,8 @@ def _card(**overrides) -> Card:
 
 
 def _fake_art() -> RasterImage:
-    return RasterImage(data=bytes(24 * 192), width_bytes=24, height=192)
+    # 192×144 = typical landscape ratio matching Scryfall art_crop (626×457 ≈ 4:3)
+    return RasterImage(data=bytes(24 * 144), width_bytes=24, height=144)
 
 
 @pytest.fixture
@@ -78,7 +79,7 @@ class TestLoadArt:
         fetch_and_store_art(db_path, [_card()])
         result = load_art(db_path, _card())
         assert isinstance(result, RasterImage)
-        assert len(result.data) == 24 * 192
+        assert len(result.data) == 24 * 144
 
     def test_returns_none_for_unknown_card(self, db_path):
         unknown = _card(name="Unknown Card")
