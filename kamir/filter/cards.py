@@ -67,7 +67,7 @@ def wrap_oracle(text: str | None, width: int = 39) -> str:
     """Wrap oracle text: double-spaces become paragraph breaks, lines wrap at width."""
     if not text:
         return ""
-    paragraphs = text.replace("  ", "\n").split("\n")
+    paragraphs = text.replace("\\n", "\n").replace("  ", "\n").split("\n")
     lines: list[str] = []
     for para in paragraphs:
         wrapped = textwrap.wrap(para, width)

@@ -72,6 +72,33 @@ class TestRenderCard:
     def test_no_art_by_default(self):
         assert not any(isinstance(i, RasterImage) for i in render_card(_card()))
 
+    def test_leading_blank_lines_before_content(self):
+        instrs = render_card(_card())
+        leading_blanks = 0
+        for instr in instrs:
+            if isinstance(instr, TextLine) and instr.text == "":
+                leading_blanks += 1
+            else:
+                break
+        assert leading_blanks >= 3
+
+    def test_trailing_blank_lines_before_cut(self):
+        instrs = render_card(_card())
+        cut_idx = next(i for i, x in enumerate(instrs) if isinstance(x, Cut))
+        trailing_blanks = 0
+        for i in range(cut_idx - 1, -1, -1):
+            if isinstance(instrs[i], TextLine) and instrs[i].text == "":
+                trailing_blanks += 1
+            else:
+                break
+        assert trailing_blanks >= 3
+
+    def test_oracle_literal_backslash_n_produces_separate_lines(self):
+        instrs = render_card(_card(oracle_text="Flying\\nHaste"))
+        lines = [i.text for i in instrs if isinstance(i, TextLine)]
+        assert "Flying" in lines
+        assert "Haste" in lines
+
     def test_art_inserted_after_header_rule(self):
         art = RasterImage(data=bytes(48 * 192), width_bytes=48, height=192)
         instrs = render_card(_card(), art)
