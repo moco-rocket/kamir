@@ -54,8 +54,7 @@ def render_card(card: Card, art: RasterImage | None = None) -> list[Instruction]
     """Convert a Card to an ordered list of ESC/POS print instructions."""
     out: list[Instruction] = []
 
-    for _ in range(3):
-        out.append(TextLine(""))
+    out.append(TextLine(""))
     out.append(Rule(thick=True))
     out.extend(_header(card.name, card.mana_cost))
     out.append(Rule(thick=True))
