@@ -36,6 +36,59 @@ def stage_build_db(cfg: dict) -> None:
     log.info("Database written: %s", paths["kamir_db"])
 
 
+def stage_play(cfg: dict) -> None:
+    from kamir.play.display import format_card
+    from kamir.play.select import select_creature
+
+    db_path = cfg["paths"]["kamir_db"]
+    auto_print = cfg.get("play", {}).get("auto_print", False)
+
+    print("Kamir — Momir Basic  (終了: q または Ctrl-C)")
+    print()
+
+    while True:
+        try:
+            raw = input("マナ総量 > ").strip()
+        except (KeyboardInterrupt, EOFError):
+            print()
+            break
+
+        if raw.lower() in ("q", "quit", "exit"):
+            break
+
+        try:
+            mv = int(raw)
+        except ValueError:
+            print("  整数を入力してください。")
+            continue
+
+        if mv < 0:
+            print("  0 以上の整数を入力してください。")
+            continue
+
+        card = select_creature(db_path, mv)
+        if card is None:
+            print(f"  マナ総量 {mv} のクリーチャーはプールに存在しません。")
+            continue
+
+        print()
+        print(format_card(card))
+        print()
+
+        if not auto_print:
+            try:
+                confirm = input("  印刷しますか？ [y/N] > ").strip().lower()
+            except (KeyboardInterrupt, EOFError):
+                print()
+                break
+            if confirm != "y":
+                continue
+
+        # Phase 3: printer.send.print_card(card, cfg["printer"])
+        print("  (印刷機能は Phase 3 で実装予定)")
+        print()
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(
         prog="kamir",
@@ -46,6 +99,7 @@ def main() -> None:
 
     sub = parser.add_subparsers(dest="command", required=True)
     sub.add_parser("build-db", help="Build kamir_cardpool.sqlite from AllPrintings.sqlite")
+    sub.add_parser("play", help="Start an interactive Momir Basic play session")
 
     args = parser.parse_args()
 
@@ -57,3 +111,5 @@ def main() -> None:
 
     if args.command == "build-db":
         stage_build_db(cfg)
+    elif args.command == "play":
+        stage_play(cfg)
