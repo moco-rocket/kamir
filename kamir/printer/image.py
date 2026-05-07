@@ -146,5 +146,5 @@ def _to_raster(img_bytes: bytes) -> RasterImage:
     img = img.convert("1", dither=Image.Dither.FLOYDSTEINBERG)
     # PIL "1" tobytes: 0=black→0-bit, 1=white→1-bit, packed MSB-first.
     # ESC/POS GS v 0: 1=print (black). Invert all bits.
-    data = bytes(b ^ 0xFF for b in img.tobytes())
+    data = bytes(b ^ 0xFF for b in img.tobytes("raw", "1"))
     return RasterImage(data=data, width_bytes=WIDTH_DOTS // 8, height=HEIGHT_DOTS)
