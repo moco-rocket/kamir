@@ -43,10 +43,10 @@ class TestEncode:
         assert b"\xc3\x9b" not in data  # no raw UTF-8 bytes for Û
 
     def test_raster_image_encoded(self):
-        art = RasterImage(data=bytes(48 * 192), width_bytes=48, height=192)
+        art = RasterImage(data=bytes(24 * 192), width_bytes=24, height=192)
         data = _encode(render_card(_card(), art))
-        # ESC * 0 nL=128 nH=1 — 8-dot single density, 384 dots wide
-        assert _ESC_STAR + bytes([128, 1]) in data
+        # ESC * 0 nL=192 nH=0 — 8-dot single density, 192 dots wide
+        assert _ESC_STAR + bytes([192, 0]) in data
 
 
 class TestPrintCard:
@@ -65,7 +65,7 @@ class TestPrintCard:
         assert _CUT_FULL in data
 
     def test_includes_raster_when_art_provided(self, tmp_path):
-        art = RasterImage(data=bytes(48 * 192), width_bytes=48, height=192)
+        art = RasterImage(data=bytes(24 * 192), width_bytes=24, height=192)
         device = tmp_path / "fake_printer"
         device.touch()
         print_card(_card(), str(device), art)
