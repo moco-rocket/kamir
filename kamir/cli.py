@@ -8,7 +8,7 @@ from kamir.db.load import open_source, iter_raw_cards, all_set_codes
 from kamir.db.write import create_kamir_db, insert_cards
 from kamir.filter.cards import filter_cards
 from kamir.play.display import format_card
-from kamir.play.select import select_creature
+from kamir.play.select import select_creature, find_by_name
 from kamir.printer.send import print_card
 from kamir.utils import log as log_mod
 
@@ -121,7 +121,11 @@ def stage_art_status(cfg: dict) -> None:
         print(f"  未取得: {missing} — 'kamir build-db' を再実行してダウンロードできます。")
 
 
-def stage_print_test(cfg: dict, mana_value: int) -> None:
+def stage_print_test(
+    cfg: dict,
+    mana_value: int | None = None,
+    name: str | None = None,
+) -> None:
     db_path = cfg["paths"]["kamir_db"]
     device = cfg["printer"]["device"]
 
@@ -130,10 +134,16 @@ def stage_print_test(cfg: dict, mana_value: int) -> None:
         log.error("Card pool not found at %s.", db_path)
         return
 
-    card = select_creature(db_path, mana_value)
-    if card is None:
-        print(f"  マナ総量 {mana_value} のクリーチャーはプールに存在しません。")
-        return
+    if name is not None:
+        card = find_by_name(db_path, name)
+        if card is None:
+            print(f"  「{name}」はカードプールに存在しません。")
+            return
+    else:
+        card = select_creature(db_path, mana_value)
+        if card is None:
+            print(f"  マナ総量 {mana_value} のクリーチャーはプールに存在しません。")
+            return
 
     print(format_card(card))
     print()
@@ -158,8 +168,10 @@ def main() -> None:
     bdb.add_argument("--force", action="store_true", help="Drop and recreate the DB (re-downloads all art)")
     sub.add_parser("play", help="Start an interactive Momir Basic play session")
     sub.add_parser("art-status", help="Show how many cards have art downloaded")
-    pt = sub.add_parser("print-test", help="Print a random card at a given mana value (hardware test)")
-    pt.add_argument("--mv", type=int, required=True, metavar="N", help="Mana value")
+    pt = sub.add_parser("print-test", help="Print a card for hardware testing")
+    pt_group = pt.add_mutually_exclusive_group(required=True)
+    pt_group.add_argument("--mv", type=int, metavar="N", help="Random card at mana value N")
+    pt_group.add_argument("--name", metavar="NAME", help="Specific card by name")
 
     args = parser.parse_args()
 
@@ -176,4 +188,4 @@ def main() -> None:
     elif args.command == "art-status":
         stage_art_status(cfg)
     elif args.command == "print-test":
-        stage_print_test(cfg, args.mv)
+        stage_print_test(cfg, mana_value=args.mv, name=args.name)
