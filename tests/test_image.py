@@ -49,8 +49,8 @@ class TestToRaster:
         w, h = 100, 60
         result = _to_raster(_make_jpeg(width=w, height=h))
         assert result.width_bytes == WIDTH_DOTS // 8
-        # height preserves source aspect ratio, rounded to nearest multiple of 8
-        expected_h = max(8, round(WIDTH_DOTS * h / w / 8) * 8)
+        # height uses WIDTH_DOTS//2 as effective width (printer renders 192 cols across full 384-dot head)
+        expected_h = max(8, round(WIDTH_DOTS // 2 * h / w / 8) * 8)
         assert result.height == expected_h
 
     def test_data_length_matches_dimensions(self):
