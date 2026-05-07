@@ -4,7 +4,7 @@ from pathlib import Path
 
 from kamir import config as cfg_mod
 from kamir.db.art import art_stats, fetch_and_store_art, load_art
-from kamir.db.load import open_source, iter_raw_cards
+from kamir.db.load import open_source, iter_raw_cards, all_set_codes
 from kamir.db.write import create_kamir_db, insert_cards
 from kamir.filter.cards import filter_cards
 from kamir.play.display import format_card
@@ -23,10 +23,17 @@ def _resolve(cfg: dict, root: Path) -> dict:
 
 def stage_build_db(cfg: dict, force: bool = False) -> None:
     paths = cfg["paths"]
-    allowed = set(cfg["sets"]["allowed"])
+    allowed_cfg = cfg["sets"]["allowed"]
 
     log.info("Opening source database: %s", paths["mtgjson_db"])
     src_conn = open_source(paths["mtgjson_db"])
+
+    if allowed_cfg == "all":
+        allowed = all_set_codes(src_conn)
+        log.info("sets = \"all\": resolved to %d set codes", len(allowed))
+    else:
+        allowed = set(allowed_cfg)
+
     raw_cards = iter_raw_cards(src_conn)
     src_conn.close()
 
