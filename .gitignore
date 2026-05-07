@@ -1,0 +1,20 @@
+# Generated data
+data/db/*.sqlite
+data/img/
+data/pdf/
+logs/
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+dist/
+build/
+.eggs/
+
+# uv
+.venv/
+.python-version
+
+# OS
+.DS_Store
