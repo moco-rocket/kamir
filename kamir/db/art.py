@@ -94,8 +94,17 @@ def load_art(db_path: Path, card: Card) -> RasterImage | None:
             "SELECT art_raster FROM cards WHERE name = ?", (card.name,)
         ).fetchone()
         if row and row[0] is not None:
+            blob = bytes(row[0])
+            expected = (WIDTH_DOTS // 8) * HEIGHT_DOTS
+            if len(blob) != expected:
+                log.warning(
+                    "art_raster for '%s': %d B stored, expected %d B "
+                    "— skipping art (re-run 'kamir build-db --force' to fix)",
+                    card.name, len(blob), expected,
+                )
+                return None
             return RasterImage(
-                data=bytes(row[0]),
+                data=blob,
                 width_bytes=WIDTH_DOTS // 8,
                 height=HEIGHT_DOTS,
             )

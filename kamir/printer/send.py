@@ -1,5 +1,10 @@
+import logging
+import os
+
 from kamir.domain import Card
 from kamir.printer.render import Cut, Instruction, RasterImage, Rule, TextLine, render_card
+
+log = logging.getLogger(__name__)
 
 _ESC = b"\x1b"
 _GS = b"\x1d"
@@ -25,6 +30,12 @@ def _encode(instructions: list[Instruction]) -> bytes:
         elif isinstance(instr, Rule):
             buf += _RULE_THICK if instr.thick else _RULE_THIN
         elif isinstance(instr, RasterImage):
+            expected = instr.width_bytes * instr.height
+            if len(instr.data) != expected:
+                raise ValueError(
+                    f"RasterImage data {len(instr.data)} B != "
+                    f"width_bytes*height={expected} B — re-run 'kamir build-db --force'"
+                )
             buf += _GS_RASTER
             buf += bytes([
                 instr.width_bytes & 0xFF,
@@ -41,5 +52,11 @@ def _encode(instructions: list[Instruction]) -> bytes:
 def print_card(card: Card, device: str, art: RasterImage | None = None) -> None:
     """Render card and write ESC/POS bytes to the thermal printer device."""
     data = _encode(render_card(card, art))
-    with open(device, "wb") as f:
-        f.write(data)
+    log.debug("print_card: %d B → %s", len(data), device)
+    fd = os.open(device, os.O_WRONLY)
+    try:
+        pos = 0
+        while pos < len(data):
+            pos += os.write(fd, data[pos:])
+    finally:
+        os.close(fd)
