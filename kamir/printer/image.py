@@ -14,9 +14,10 @@ from kamir.printer.render import RasterImage
 log = logging.getLogger(__name__)
 
 WIDTH_DOTS = 192  # ESC * nH must be 0 on MJ-5890K; 192 = 0xC0 fits in single byte
-# ESC 3 unit on MJ-5890K ≈ 1/6mm → advance per band = 8*(1/6mm) ≈ 1.33mm.
-# 18 bands × 1.33mm ≈ 24mm = WIDTH_DOTS/8mm → square image on paper.
-HEIGHT_DOTS = 144  # 18 bands × 8 rows; tune up/down if image appears portrait/landscape
+# ESC 3 8 advance per band is larger than 1 dot-row on this printer.
+# Tune this value (must be multiple of 8) until art appears square on paper:
+#   still portrait → decrease; landscape → increase.
+HEIGHT_DOTS = 96   # 12 bands × 8 rows
 
 _HEADERS = {
     "User-Agent": "kamir/1.0 (Momir Basic play tool)",
