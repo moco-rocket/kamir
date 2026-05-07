@@ -45,6 +45,7 @@ def fetch_and_store_art(db_path: Path, cards: list[Card]) -> None:
 
         # Phase 2 — download images (slow: one CDN request per card)
         ok = 0
+        fail = 0
         with tqdm(pending, desc="Art", unit="card", dynamic_ncols=True) as bar:
             for card in bar:
                 url = art_urls.get(card.name)
@@ -57,7 +58,11 @@ def fetch_and_store_art(db_path: Path, cards: list[Card]) -> None:
                         )
                         conn.commit()
                         ok += 1
-                bar.set_postfix(ok=ok, fail=bar.n - ok)
+                    else:
+                        fail += 1
+                else:
+                    fail += 1
+                bar.set_postfix(ok=ok, fail=fail)
 
         tqdm.write(f"Art: complete — {ok}/{total} images stored")
         log.info("Art: complete — %d/%d images stored", ok, total)
