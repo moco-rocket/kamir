@@ -92,6 +92,7 @@ def batch_fetch_art_crop_urls(cards: list[Card]) -> dict[str, str]:
                 url = _extract_art_crop_url(cd)
                 if url:
                     result[card.name] = url
+            time.sleep(_SCRYFALL_DELAY)
 
         time.sleep(_SCRYFALL_DELAY)
 

@@ -45,7 +45,7 @@ def fetch_and_store_art(db_path: Path, cards: list[Card]) -> None:
 
         # Phase 2 — download images (slow: one CDN request per card)
         ok = 0
-        with tqdm(pending, desc="Art", unit="card", ncols=80, dynamic_ncols=True) as bar:
+        with tqdm(pending, desc="Art", unit="card", dynamic_ncols=True) as bar:
             for card in bar:
                 url = art_urls.get(card.name)
                 if url:
