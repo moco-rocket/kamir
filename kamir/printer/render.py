@@ -35,7 +35,7 @@ def _header(name: str, mana_cost: str) -> list[TextLine]:
 
 
 def _footer(expansion: str, power: str, toughness: str) -> TextLine:
-    pt = f"{power}/{toughness}" if power else ""
+    pt = f"{power}/{toughness}" if (power or toughness) else ""
     exp = f"[{expansion}]"
     gap = _PRINTER_WIDTH - len(exp) - len(pt)
     if gap >= 1:

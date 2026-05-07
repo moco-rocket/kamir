@@ -39,8 +39,8 @@ class TestEncode:
     def test_non_ascii_replaced(self):
         card = _card(oracle_text="Ûlrich attacks.")
         data = _encode(render_card(card))
-        assert b"\xff" not in data  # no raw high bytes from latin-1
-        assert isinstance(data, bytes)
+        assert b"?" in data              # replacement character inserted
+        assert b"\xc3\x9b" not in data  # no raw UTF-8 bytes for Û
 
 
 class TestPrintCard:

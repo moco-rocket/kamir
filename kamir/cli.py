@@ -90,8 +90,12 @@ def stage_play(cfg: dict) -> None:
             if confirm != "y":
                 continue
 
-        print_card(card, device)
-        log.info("Printed: %s (MV %d)", card.name, card.mana_value)
+        try:
+            print_card(card, device)
+            log.info("Printed: %s (MV %d)", card.name, card.mana_value)
+        except OSError as e:
+            print(f"  印刷エラー: {e}")
+            log.error("Print failed for '%s': %s", card.name, e)
 
 
 def stage_print_test(cfg: dict, mana_value: int) -> None:
@@ -110,8 +114,12 @@ def stage_print_test(cfg: dict, mana_value: int) -> None:
 
     print(format_card(card))
     print()
-    print_card(card, device)
-    log.info("print-test: %s (MV %d) → %s", card.name, card.mana_value, device)
+    try:
+        print_card(card, device)
+        log.info("print-test: %s (MV %d) → %s", card.name, card.mana_value, device)
+    except OSError as e:
+        print(f"  印刷エラー: {e}")
+        log.error("print-test failed: %s", e)
 
 
 def main() -> None:

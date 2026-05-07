@@ -64,3 +64,7 @@ class TestRenderCard:
     def test_no_pt_omits_slash(self):
         text = " ".join(i.text for i in render_card(_card(power="", toughness="")) if isinstance(i, TextLine))
         assert "/" not in text
+
+    def test_toughness_only_shows_pt(self):
+        text = " ".join(i.text for i in render_card(_card(power="", toughness="*")) if isinstance(i, TextLine))
+        assert "/*" in text
