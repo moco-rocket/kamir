@@ -38,7 +38,7 @@ def render_card_pdf(card: dict, img_path: Path) -> bytes:
     # Border
     c.setStrokeColorRGB(0.8, 0.8, 0.8)
     c.setLineWidth(L.BORDER_LINE_WIDTH)
-    c.rect(L.BORDER_MARGIN, L.BORDER_MARGIN, 47 * mm, 66 * mm)
+    c.rect(L.BORDER_MARGIN, L.BORDER_MARGIN, L.CARD_W - 2 * L.BORDER_MARGIN, L.CARD_H - 2 * L.BORDER_MARGIN)
 
     # Mana cost
     c.setFont("Courier", L.MANA_FONT_SIZE)

@@ -86,11 +86,9 @@ def stage_make_pdfs(cfg: dict) -> None:
     cards = [dict(row) for row in cur.fetchall()]
     conn.close()
 
-    mv_str = lambda c: str(c["mana_value"])
-    safe = lambda c: c["name"].replace("/", "-")
     to_render = [
         c for c in cards
-        if not (paths["pdf_dir"] / mv_str(c) / f"{safe(c)}.pdf").exists()
+        if not (paths["pdf_dir"] / str(c["mana_value"]) / f"{c['name'].replace('/', '-')}.pdf").exists()
     ]
     log.info("%d PDFs to render (%d already done)", len(to_render), len(cards) - len(to_render))
 
