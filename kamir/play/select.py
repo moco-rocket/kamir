@@ -15,7 +15,9 @@ def load_pool(db_path: Path, mana_value: int) -> list[Card]:
     conn.row_factory = sqlite3.Row
     cur = conn.cursor()
     cur.execute(
-        "SELECT * FROM cards WHERE mana_value = ? ORDER BY name",
+        """SELECT name, mana_value, mana_cost, type_line, oracle_text,
+                  expansion, power, toughness, layout, collector_number
+           FROM cards WHERE mana_value = ? ORDER BY name""",
         (mana_value,),
     )
     rows = cur.fetchall()

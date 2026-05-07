@@ -3,6 +3,7 @@ import logging
 from pathlib import Path
 
 from kamir import config as cfg_mod
+from kamir.db.art import fetch_and_store_art, load_art
 from kamir.db.load import open_source, iter_raw_cards
 from kamir.db.write import create_kamir_db, insert_cards
 from kamir.filter.cards import filter_cards
@@ -37,6 +38,8 @@ def stage_build_db(cfg: dict) -> None:
     insert_cards(dest_conn, filtered)
     dest_conn.close()
     log.info("Database written: %s", paths["kamir_db"])
+
+    fetch_and_store_art(paths["kamir_db"], filtered)
 
 
 def stage_play(cfg: dict) -> None:
@@ -77,7 +80,7 @@ def stage_play(cfg: dict) -> None:
             continue
 
         try:
-            print_card(card, device)
+            print_card(card, device, load_art(db_path, card))
             log.info("Printed: %s (MV %d)", card.name, card.mana_value)
         except OSError as e:
             print(f"  印刷エラー: {e}")
@@ -101,7 +104,7 @@ def stage_print_test(cfg: dict, mana_value: int) -> None:
     print(format_card(card))
     print()
     try:
-        print_card(card, device)
+        print_card(card, device, load_art(db_path, card))
         log.info("print-test: %s (MV %d) → %s", card.name, card.mana_value, device)
     except OSError as e:
         print(f"  印刷エラー: {e}")

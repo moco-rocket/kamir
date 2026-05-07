@@ -15,7 +15,8 @@ CREATE TABLE cards (
     power            TEXT,
     toughness        TEXT,
     layout           TEXT,
-    collector_number TEXT
+    collector_number TEXT,
+    art_raster       BLOB
 )
 """
 

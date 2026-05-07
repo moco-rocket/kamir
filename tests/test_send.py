@@ -50,15 +50,13 @@ class TestEncode:
 
 
 class TestPrintCard:
-    def test_writes_bytes_to_device_file(self, tmp_path, mocker):
-        mocker.patch("kamir.printer.send.fetch_art", return_value=None)
+    def test_writes_bytes_to_device_file(self, tmp_path):
         device = tmp_path / "fake_printer"
         device.touch()
         print_card(_card(), str(device))
         assert device.stat().st_size > 0
 
-    def test_output_is_valid_bytes(self, tmp_path, mocker):
-        mocker.patch("kamir.printer.send.fetch_art", return_value=None)
+    def test_output_is_valid_bytes(self, tmp_path):
         device = tmp_path / "fake_printer"
         device.touch()
         print_card(_card(), str(device))
@@ -66,10 +64,9 @@ class TestPrintCard:
         assert data[:2] == _INIT
         assert _CUT_FULL in data
 
-    def test_includes_raster_when_art_available(self, tmp_path, mocker):
+    def test_includes_raster_when_art_provided(self, tmp_path):
         art = RasterImage(data=bytes(48 * 192), width_bytes=48, height=192)
-        mocker.patch("kamir.printer.send.fetch_art", return_value=art)
         device = tmp_path / "fake_printer"
         device.touch()
-        print_card(_card(), str(device))
+        print_card(_card(), str(device), art)
         assert _GS_RASTER in device.read_bytes()

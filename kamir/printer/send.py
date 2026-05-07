@@ -1,5 +1,4 @@
 from kamir.domain import Card
-from kamir.printer.image import fetch_art
 from kamir.printer.render import Cut, Instruction, RasterImage, Rule, TextLine, render_card
 
 _ESC = b"\x1b"
@@ -39,9 +38,8 @@ def _encode(instructions: list[Instruction]) -> bytes:
     return bytes(buf)
 
 
-def print_card(card: Card, device: str) -> None:
+def print_card(card: Card, device: str, art: RasterImage | None = None) -> None:
     """Render card and write ESC/POS bytes to the thermal printer device."""
-    art = fetch_art(card)
     data = _encode(render_card(card, art))
     with open(device, "wb") as f:
         f.write(data)
