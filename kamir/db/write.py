@@ -5,7 +5,7 @@ from pathlib import Path
 from kamir.domain import Card
 
 _CREATE_CARDS = """
-CREATE TABLE cards (
+CREATE TABLE IF NOT EXISTS cards (
     name             TEXT PRIMARY KEY,
     mana_value       INTEGER,
     mana_cost        TEXT,
@@ -21,11 +21,15 @@ CREATE TABLE cards (
 """
 
 
-def create_kamir_db(path: Path) -> sqlite3.Connection:
+def create_kamir_db(path: Path, force: bool = False) -> sqlite3.Connection:
+    # IF NOT EXISTS means existing rows (including art_raster BLOBs) survive a
+    # rebuild. Trade-off: schema changes (added/removed columns) are NOT applied
+    # to existing DBs. Use force=True or delete the DB manually when that happens.
     path.parent.mkdir(parents=True, exist_ok=True)
     conn = sqlite3.connect(path)
     cur = conn.cursor()
-    cur.execute("DROP TABLE IF EXISTS cards")
+    if force:
+        cur.execute("DROP TABLE IF EXISTS cards")
     cur.execute(_CREATE_CARDS)
     conn.commit()
     return conn
