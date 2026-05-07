@@ -1,6 +1,6 @@
 from kamir.domain import Card
-from kamir.printer.render import render_card
-from kamir.printer.send import _encode, _BOLD_ON, _CUT_FULL, _INIT, print_card
+from kamir.printer.render import RasterImage, render_card
+from kamir.printer.send import _encode, _BOLD_ON, _CUT_FULL, _GS_RASTER, _INIT, print_card
 
 
 def _card(**overrides) -> Card:
@@ -42,18 +42,34 @@ class TestEncode:
         assert b"?" in data              # replacement character inserted
         assert b"\xc3\x9b" not in data  # no raw UTF-8 bytes for Û
 
+    def test_raster_image_encoded(self):
+        art = RasterImage(data=bytes(48 * 192), width_bytes=48, height=192)
+        data = _encode(render_card(_card(), art))
+        assert _GS_RASTER in data
+        assert bytes([48, 0, 192, 0]) in data  # width_bytes + height header
+
 
 class TestPrintCard:
-    def test_writes_bytes_to_device_file(self, tmp_path):
+    def test_writes_bytes_to_device_file(self, tmp_path, mocker):
+        mocker.patch("kamir.printer.send.fetch_art", return_value=None)
         device = tmp_path / "fake_printer"
         device.touch()
         print_card(_card(), str(device))
         assert device.stat().st_size > 0
 
-    def test_output_is_valid_bytes(self, tmp_path):
+    def test_output_is_valid_bytes(self, tmp_path, mocker):
+        mocker.patch("kamir.printer.send.fetch_art", return_value=None)
         device = tmp_path / "fake_printer"
         device.touch()
         print_card(_card(), str(device))
         data = device.read_bytes()
         assert data[:2] == _INIT
         assert _CUT_FULL in data
+
+    def test_includes_raster_when_art_available(self, tmp_path, mocker):
+        art = RasterImage(data=bytes(48 * 192), width_bytes=48, height=192)
+        mocker.patch("kamir.printer.send.fetch_art", return_value=art)
+        device = tmp_path / "fake_printer"
+        device.touch()
+        print_card(_card(), str(device))
+        assert _GS_RASTER in device.read_bytes()

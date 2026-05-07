@@ -49,7 +49,7 @@ Scryfall image fetching and PDF generation are not part of this project.
 - Assume the deployment target is **Raspberry Pi OS Bookworm (64-bit), headless**.
 - Do not assume a display is available (`DISPLAY` env var may be unset).
 - Prefer lightweight dependencies; avoid packages that require compilation of large C extensions.
-- Do not use OpenCV or Pillow — image processing is not part of this project.
+- Do not use OpenCV. Pillow is used in `kamir/printer/image.py` for card art processing only; do not introduce it elsewhere.
 - All long-running operations must be resumable (idempotent): skip already-processed items.
 
 ## General Coding Rules

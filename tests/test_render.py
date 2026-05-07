@@ -1,5 +1,5 @@
 from kamir.domain import Card
-from kamir.printer.render import Cut, Rule, TextLine, _PRINTER_WIDTH, render_card
+from kamir.printer.render import Cut, RasterImage, Rule, TextLine, _PRINTER_WIDTH, render_card
 
 
 def _card(**overrides) -> Card:
@@ -68,3 +68,13 @@ class TestRenderCard:
     def test_toughness_only_shows_pt(self):
         text = " ".join(i.text for i in render_card(_card(power="", toughness="*")) if isinstance(i, TextLine))
         assert "/*" in text
+
+    def test_no_art_by_default(self):
+        assert not any(isinstance(i, RasterImage) for i in render_card(_card()))
+
+    def test_art_inserted_after_header_rule(self):
+        art = RasterImage(data=bytes(48 * 192), width_bytes=48, height=192)
+        instrs = render_card(_card(), art)
+        art_idx = next(i for i, x in enumerate(instrs) if isinstance(x, RasterImage))
+        # Must be preceded by the thick header rule (index 2 in normal layout)
+        assert isinstance(instrs[art_idx - 1], Rule) and instrs[art_idx - 1].thick

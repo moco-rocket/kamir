@@ -10,6 +10,7 @@
 | CLI | `argparse` (stdlib) | No extra dependency |
 | Configuration | `tomllib` (stdlib 3.11+) + `config.toml` | No extra dependency |
 | Thermal printing | Raw ESC/POS bytes over file I/O (stdlib only) | No extra dependency; direct write to `/dev/usb/lp0` |
+| Card art processing | `Pillow` | Image resize and 1-bit dithering for ESC/POS raster output |
 | Testing | `pytest` + `pytest-mock` | Standard; easy fixture support |
 
 Removed from the previous scope:
@@ -119,8 +120,9 @@ kamir-rewrite/
 │   │   └── display.py      # Format Card for terminal output
 │   └── printer/
 │       ├── __init__.py
-│       ├── render.py       # Compose ESC/POS text layout from Card
-│       └── send.py         # Send ESC/POS bytes to MJ-5890K
+│       ├── render.py       # Compose ESC/POS instruction list from Card
+│       ├── image.py        # Fetch card art from Scryfall; convert to ESC/POS raster
+│       └── send.py         # Encode instructions to bytes; write to MJ-5890K
 ├── data/
 │   └── db/                 # AllPrintings.sqlite + kamir_cardpool.sqlite
 ├── logs/
@@ -175,9 +177,12 @@ Pure functions only. Input: raw `dict` rows from MTGJSON. Output: `Card` objects
 - `display.py`: formats a `Card` as a multi-line terminal string. Pure function.
 
 ### `kamir/printer/`
-- `render.py`: converts a `Card` into an ordered list of ESC/POS instructions
-  (text segments with formatting directives). Pure function; no hardware dependency.
-- `send.py`: encodes the rendered instructions as raw ESC/POS bytes and writes them
+- `render.py`: converts a `Card` (and optional `RasterImage`) into an ordered list of
+  ESC/POS instructions. Pure function; no hardware dependency.
+- `image.py`: fetches the card's art_crop image from the Scryfall API; resizes and
+  dithers it to a 384×192 dot 1-bit bitmap; returns a `RasterImage` instruction (or
+  `None` if the fetch fails). This is the only module with network I/O.
+- `send.py`: encodes the instruction list to raw ESC/POS bytes and writes them
   directly to the device file (e.g. `/dev/usb/lp0`). This is the only module with hardware I/O.
 
 ### `kamir/cli.py`
