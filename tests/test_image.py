@@ -1,5 +1,6 @@
 import io
 import json
+import urllib.error
 from unittest.mock import MagicMock
 
 import pytest
@@ -101,3 +102,23 @@ class TestFetchArt:
         img_resp = self._mock_resp(_make_jpeg())
         mocker.patch("urllib.request.urlopen", side_effect=[card_resp, img_resp])
         assert isinstance(fetch_art(_card()), RasterImage)
+
+    def test_falls_back_to_named_lookup_on_http_error(self, mocker):
+        # Scryfall returns 400 for the set+number URL (e.g. "40k/1") but the
+        # named endpoint succeeds — should still return art.
+        http_400 = urllib.error.HTTPError(
+            "https://api.scryfall.com/cards/40k/1", 400, "Bad Request", {}, io.BytesIO(b"")
+        )
+        card_resp = self._mock_resp(
+            json.dumps({"image_uris": {"art_crop": "https://example.com/art.jpg"}}).encode()
+        )
+        img_resp = self._mock_resp(_make_jpeg())
+        mocker.patch("urllib.request.urlopen", side_effect=[http_400, card_resp, img_resp])
+        assert isinstance(fetch_art(_card(expansion="40K", collector_number="1")), RasterImage)
+
+    def test_returns_none_when_both_lookups_fail(self, mocker):
+        http_400 = urllib.error.HTTPError(
+            "https://api.scryfall.com/cards/40k/1", 400, "Bad Request", {}, io.BytesIO(b"")
+        )
+        mocker.patch("urllib.request.urlopen", side_effect=[http_400, OSError("network error")])
+        assert fetch_art(_card(expansion="40K", collector_number="1")) is None
