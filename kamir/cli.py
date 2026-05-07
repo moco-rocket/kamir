@@ -6,6 +6,8 @@ from kamir import config as cfg_mod
 from kamir.db.load import open_source, iter_raw_cards
 from kamir.db.write import create_kamir_db, insert_cards
 from kamir.filter.cards import filter_cards
+from kamir.play.display import format_card
+from kamir.play.select import select_creature
 from kamir.utils import log as log_mod
 
 log = logging.getLogger(__name__)
@@ -37,11 +39,13 @@ def stage_build_db(cfg: dict) -> None:
 
 
 def stage_play(cfg: dict) -> None:
-    from kamir.play.display import format_card
-    from kamir.play.select import select_creature
-
     db_path = cfg["paths"]["kamir_db"]
     auto_print = cfg.get("play", {}).get("auto_print", False)
+
+    if not db_path.exists():
+        print("  カードプールが見つかりません。先に 'kamir build-db' を実行してください。")
+        log.error("Card pool not found at %s. Run 'kamir build-db' first.", db_path)
+        return
 
     print("Kamir — Momir Basic  (終了: q または Ctrl-C)")
     print()
