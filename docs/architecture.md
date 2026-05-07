@@ -140,7 +140,7 @@ kamir-rewrite/
 | `kamir/images/` | No artwork is fetched during gameplay |
 | `kamir/render/pdf.py` | PDF rendering replaced by ESC/POS text output |
 | `kamir/render/layout.py` | Layout constants specific to the removed PDF renderer |
-| `kamir/utils/progress.py` | Merged into cli.py or kept only for build-db stage |
+| `kamir/utils/progress.py` | Deleted — never called anywhere |
 
 ---
 
