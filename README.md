@@ -15,6 +15,13 @@ MJ-5890Kサーマルプリンターにカード情報を印刷します。印刷
 ## セットアップ
 
 ```bash
+# uv をインストール（未インストールの場合）
+curl -LsSf https://astral.sh/uv/install.sh | sh
+
+# リポジトリをクローン
+git clone https://github.com/moco-rocket/kamir.git
+cd kamir
+
 # 依存パッケージをインストール
 uv sync
 
@@ -22,6 +29,8 @@ uv sync
 # https://mtgjson.com/downloads/all-files/#allprintings
 mkdir -p data/db
 mv AllPrintings.sqlite data/db/
+
+# config.toml を作成（下記「設定」セクション参照）
 
 # カードプールDBを構築（初回のみ）
 uv run kamir build-db
@@ -35,6 +44,9 @@ uv run kamir build-db
 
 # ゲームセッション開始
 uv run kamir play
+
+# ハードウェアテスト（マナ総量4のクリーチャーを1枚印刷）
+uv run kamir print-test --mv 4
 
 # デバッグログを有効にする
 uv run kamir --debug build-db
@@ -57,19 +69,22 @@ uv run pytest
 
 ## 設定
 
-`config.toml` で動作をカスタマイズできます。
+プロジェクトルートに `config.toml` を作成します。
 
 ```toml
+[paths]
+mtgjson_db = "data/db/AllPrintings.sqlite"
+kamir_db   = "data/db/kamir_cardpool.sqlite"
+log_file   = "logs/kamir.log"
+
 [play]
 auto_print = false   # trueにすると確認なしで即印刷
 
 [printer]
-device      = "/dev/usb/lp0"  # プリンターのUSBデバイスパス
-usb_vendor  = 0x0000          # lsusb で確認したVendor ID
-usb_product = 0x0000          # lsusb で確認したProduct ID
+device = "/dev/usb/lp0"  # プリンターのUSBデバイスパス
 
 [sets]
-allowed = ["LEA", "2ED", ...]  # 使用するエキスパンション
+allowed = ["LEA", "LEB", "2ED", "3ED", "4ED", "5ED", "6ED", "7ED", "8ED", "9ED", "10E"]
 ```
 
 ## プロジェクト構成
@@ -94,4 +109,4 @@ kamir/
 | Phase 1 | Card ドメインモデル、DBビルダー、モジュール整理 | ✅ 完了 |
 | Phase 2 | プレイアプリ（対話型クリーチャー選択・ターミナル表示） | ✅ 完了 |
 | Phase 3 | 印刷（ESC/POSテキスト描画・MJ-5890K送信） | ✅ 完了 |
-| Phase 4 | Raspberry Pi実機テスト・設定調整 | 未着手 |
+| Phase 4 | Raspberry Pi実機テスト・設定調整 | ✅ 完了 |

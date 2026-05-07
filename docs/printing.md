@@ -100,22 +100,39 @@ by three or more creatures.
 
 ## Hardware Setup on Raspberry Pi
 
-1. Connect the MJ-5890K to the Raspberry Pi via USB.
-2. Verify the device is recognized:
+1. Install uv (if not already installed):
+   ```bash
+   curl -LsSf https://astral.sh/uv/install.sh | sh
+   ```
+2. Clone the repository and install dependencies:
+   ```bash
+   git clone https://github.com/moco-rocket/kamir.git
+   cd kamir
+   uv sync
+   ```
+3. Place `AllPrintings.sqlite` in `data/db/` and build the card pool:
+   ```bash
+   mkdir -p data/db
+   mv AllPrintings.sqlite data/db/
+   uv run kamir build-db
+   ```
+4. Connect the MJ-5890K to the Raspberry Pi via USB.
+5. Verify the device is recognized:
    ```bash
    ls /dev/usb/lp*
    lsusb | grep -i thermal
    ```
-3. Grant the `kamir` user access to the printer device:
+6. Grant the `kamir` user access to the printer device (log out and back in after):
    ```bash
    sudo usermod -aG lp $USER
    ```
-4. Update `config.toml` with the correct device path:
+7. Create `config.toml` in the project root (see README for the full template).
+   The minimum required entry for printing:
    ```toml
    [printer]
    device = "/dev/usb/lp0"
    ```
-5. Test the connection:
+8. Test the connection:
    ```bash
    uv run kamir print-test --mv 4
    ```
