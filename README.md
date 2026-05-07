@@ -107,3 +107,9 @@ kamir/
 | Phase 2 | プレイアプリ（対話型クリーチャー選択・ターミナル表示） | ✅ 完了 |
 | Phase 3 | 印刷（ESC/POSテキスト描画・MJ-5890K送信） | ✅ 完了 |
 | Phase 4 | Raspberry Pi実機テスト・設定調整 | ✅ 完了 |
+
+## Legal
+
+Kamir is unofficial Fan Content permitted under the Fan Content Policy. Not approved/endorsed by Wizards. Portions of the materials used are property of Wizards of the Coast. ©Wizards of the Coast LLC.
+
+Card images are provided by [Scryfall](https://scryfall.com) and are used in accordance with their [terms of service](https://scryfall.com/docs/terms).
