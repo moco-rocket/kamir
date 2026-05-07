@@ -35,6 +35,6 @@ allowed = [
     "WAR", "MH1", "M20", "C19", "ELD", "GN2", "THB", "C20", "IKO",
     "M21", "JMP", "ZNR", "ZNC", "CMR", "KHM", "KHC", "STX", "C21",
     "MH2", "AFR", "AFC", "MID", "MIC", "VOW", "VOC", "NEO", "NEC",
-    "SNC", "NCC", "CLB", "DMU", "40K", "UNF", "GN3", "BRO", "J22",
+    "SNC", "NCC", "CLB", "DMU", "40K", "GN3", "BRO", "J22",
     "SLD", "SLX",
 ]
