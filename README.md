@@ -99,7 +99,7 @@ kamir_db   = "data/db/kamir_cardpool.sqlite"
 log_file   = "logs/kamir.log"
 
 [play]
-auto_print = false  # true にすると確認なしに即印刷
+auto_print = true   # false にすると印刷前に確認プロンプトを表示
 
 [printer]
 device      = "/dev/usb/lp0"   # Raspberry Pi でのUSBデバイスパス
