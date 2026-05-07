@@ -21,7 +21,7 @@ def _resolve(cfg: dict, root: Path) -> dict:
     return {**cfg, "paths": paths}
 
 
-def stage_build_db(cfg: dict) -> None:
+def stage_build_db(cfg: dict, force: bool = False) -> None:
     paths = cfg["paths"]
     allowed = set(cfg["sets"]["allowed"])
 
@@ -34,7 +34,9 @@ def stage_build_db(cfg: dict) -> None:
     filtered = filter_cards(raw_cards, allowed)
     log.info("%d cards passed filter", len(filtered))
 
-    dest_conn = create_kamir_db(paths["kamir_db"])
+    if force:
+        log.info("--force: dropping existing DB")
+    dest_conn = create_kamir_db(paths["kamir_db"], force=force)
     insert_cards(dest_conn, filtered)
     dest_conn.close()
     log.info("Database written: %s", paths["kamir_db"])
@@ -135,7 +137,8 @@ def main() -> None:
     parser.add_argument("--debug", action="store_true")
 
     sub = parser.add_subparsers(dest="command", required=True)
-    sub.add_parser("build-db", help="Build kamir_cardpool.sqlite from AllPrintings.sqlite")
+    bdb = sub.add_parser("build-db", help="Build kamir_cardpool.sqlite from AllPrintings.sqlite")
+    bdb.add_argument("--force", action="store_true", help="Drop and recreate the DB (re-downloads all art)")
     sub.add_parser("play", help="Start an interactive Momir Basic play session")
     sub.add_parser("art-status", help="Show how many cards have art downloaded")
     pt = sub.add_parser("print-test", help="Print a random card at a given mana value (hardware test)")
@@ -150,7 +153,7 @@ def main() -> None:
     log_mod.setup(cfg["paths"]["log_file"], level=logging.DEBUG if args.debug else logging.INFO)
 
     if args.command == "build-db":
-        stage_build_db(cfg)
+        stage_build_db(cfg, force=args.force)
     elif args.command == "play":
         stage_play(cfg)
     elif args.command == "art-status":

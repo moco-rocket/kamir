@@ -51,6 +51,18 @@ class TestCreateKamirDb:
         assert cur.fetchone()[0] == 1
         conn2.close()
 
+    def test_force_wipes_existing_rows(self, tmp_path):
+        path = tmp_path / "test.sqlite"
+        conn1 = create_kamir_db(path)
+        insert_cards(conn1, [_sample_card()])
+        conn1.close()
+
+        conn2 = create_kamir_db(path, force=True)
+        cur = conn2.cursor()
+        cur.execute("SELECT COUNT(*) FROM cards")
+        assert cur.fetchone()[0] == 0
+        conn2.close()
+
 
 class TestInsertCards:
     def test_insert_single(self, kamir_conn):
