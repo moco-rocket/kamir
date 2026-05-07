@@ -110,27 +110,22 @@ by three or more creatures.
    cd kamir
    uv sync
    ```
-3. Place `AllPrintings.sqlite` in `data/db/` and build the card pool:
+3. Create `config.toml` in the project root (see README for the full template).
+4. Place `AllPrintings.sqlite` in `data/db/` and build the card pool:
    ```bash
    mkdir -p data/db
    mv AllPrintings.sqlite data/db/
    uv run kamir build-db
    ```
-4. Connect the MJ-5890K to the Raspberry Pi via USB.
-5. Verify the device is recognized:
+5. Connect the MJ-5890K to the Raspberry Pi via USB.
+6. Verify the device is recognized:
    ```bash
    ls /dev/usb/lp*
    lsusb | grep -i thermal
    ```
-6. Grant the `kamir` user access to the printer device (log out and back in after):
+7. Grant the `kamir` user access to the printer device (log out and back in after):
    ```bash
    sudo usermod -aG lp $USER
-   ```
-7. Create `config.toml` in the project root (see README for the full template).
-   The minimum required entry for printing:
-   ```toml
-   [printer]
-   device = "/dev/usb/lp0"
    ```
 8. Test the connection:
    ```bash
