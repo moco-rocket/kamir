@@ -37,3 +37,19 @@ def select_creature(
     if rng is None:
         rng = random.Random()
     return rng.choice(pool)
+
+
+def find_by_name(db_path: Path, name: str) -> Card | None:
+    """Return the Card with the given name (case-insensitive), or None if not found."""
+    conn = sqlite3.connect(db_path)
+    conn.row_factory = sqlite3.Row
+    cur = conn.cursor()
+    cur.execute(
+        """SELECT name, mana_value, mana_cost, type_line, oracle_text,
+                  expansion, power, toughness, layout, collector_number
+           FROM cards WHERE name = ? COLLATE NOCASE""",
+        (name,),
+    )
+    row = cur.fetchone()
+    conn.close()
+    return _row_to_card(row) if row else None

@@ -5,7 +5,7 @@ import pytest
 
 from kamir.db.write import create_kamir_db, insert_cards
 from kamir.domain import Card
-from kamir.play.select import load_pool, select_creature
+from kamir.play.select import load_pool, select_creature, find_by_name
 
 
 def _card(**overrides) -> Card:
@@ -74,3 +74,23 @@ class TestSelectCreature:
         card = select_creature(db_path, 6)
         assert card is not None
         assert card.name == "Craw Wurm"
+
+
+class TestFindByName:
+    def test_exact_match(self, db_path):
+        card = find_by_name(db_path, "Grizzly Bears")
+        assert card is not None
+        assert card.name == "Grizzly Bears"
+
+    def test_case_insensitive(self, db_path):
+        card = find_by_name(db_path, "grizzly bears")
+        assert card is not None
+        assert card.name == "Grizzly Bears"
+
+    def test_not_found_returns_none(self, db_path):
+        assert find_by_name(db_path, "Black Lotus") is None
+
+    def test_returns_card_object(self, db_path):
+        card = find_by_name(db_path, "Llanowar Elves")
+        assert isinstance(card, Card)
+        assert card.mana_value == 1
