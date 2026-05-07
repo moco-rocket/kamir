@@ -1,4 +1,5 @@
 import pytest
+from kamir.domain import Card
 from kamir.filter.cards import (
     is_creature,
     is_allowed_set,
@@ -124,19 +125,14 @@ class TestNormalizeOracle:
 
 class TestWrapOracle:
     def test_short_line_unchanged(self):
-        text = "Flying"
-        assert wrap_oracle(text) == "Flying"
+        assert wrap_oracle("Flying") == "Flying"
 
     def test_long_line_wraps(self):
-        text = "A" * 40
-        result = wrap_oracle(text, width=39)
-        lines = result.split("\n")
-        assert len(lines) == 2
+        result = wrap_oracle("A" * 40, width=39)
+        assert len(result.split("\n")) == 2
 
     def test_double_space_becomes_paragraph_break(self):
-        text = "Flying  Haste"
-        result = wrap_oracle(text)
-        assert "\n" in result
+        assert "\n" in wrap_oracle("Flying  Haste")
 
     def test_empty(self):
         assert wrap_oracle("") == ""
@@ -147,34 +143,33 @@ class TestWrapOracle:
 
 class TestFilterCards:
     def test_basic_creature_passes(self, make_card):
-        cards = [make_card()]
-        result = filter_cards(cards, {"2ED"})
+        result = filter_cards([make_card()], {"2ED"})
         assert len(result) == 1
-        assert result[0]["name"] == "Grizzly Bears"
+        assert result[0].name == "Grizzly Bears"
+
+    def test_returns_card_objects(self, make_card):
+        result = filter_cards([make_card()], {"2ED"})
+        assert isinstance(result[0], Card)
+        assert result[0].mana_value == 2
+        assert result[0].collector_number == "178"
 
     def test_non_creature_excluded(self, make_card):
-        cards = [make_card(types="Instant")]
-        assert filter_cards(cards, {"2ED"}) == []
+        assert filter_cards([make_card(types="Instant")], {"2ED"}) == []
 
     def test_disallowed_set_excluded(self, make_card):
-        cards = [make_card(setCode="XXX")]
-        assert filter_cards(cards, {"2ED"}) == []
+        assert filter_cards([make_card(setCode="XXX")], {"2ED"}) == []
 
     def test_funny_excluded(self, make_card):
-        cards = [make_card(isFunny=1)]
-        assert filter_cards(cards, {"2ED"}) == []
+        assert filter_cards([make_card(isFunny=1)], {"2ED"}) == []
 
     def test_reprint_excluded(self, make_card):
-        cards = [make_card(isReprint=1)]
-        assert filter_cards(cards, {"2ED"}) == []
+        assert filter_cards([make_card(isReprint=1)], {"2ED"}) == []
 
     def test_alpha_collector_number_excluded(self, make_card):
-        cards = [make_card(number="15a")]
-        assert filter_cards(cards, {"2ED"}) == []
+        assert filter_cards([make_card(number="15a")], {"2ED"}) == []
 
     def test_side_b_excluded(self, make_card):
-        cards = [make_card(side="b")]
-        assert filter_cards(cards, {"2ED"}) == []
+        assert filter_cards([make_card(side="b")], {"2ED"}) == []
 
     def test_deduplication(self, make_card):
         cards = [make_card(), make_card(setCode="LEA")]
@@ -182,15 +177,9 @@ class TestFilterCards:
         assert len(result) == 1
 
     def test_oracle_normalized(self, make_card):
-        cards = [make_card(text="Ûlrich deals damage.")]
-        result = filter_cards(cards, {"2ED"})
-        assert "Û" not in result[0]["oracle"]
+        result = filter_cards([make_card(text="Ûlrich deals damage.")], {"2ED"})
+        assert "Û" not in result[0].oracle_text
 
-    def test_output_keys(self, make_card):
-        cards = [make_card()]
-        result = filter_cards(cards, {"2ED"})
-        expected_keys = {
-            "name", "mana_value", "mana_cost", "type", "oracle",
-            "expansion", "power", "toughness", "layout", "number", "release_date",
-        }
-        assert set(result[0].keys()) == expected_keys
+    def test_type_line_mapped(self, make_card):
+        result = filter_cards([make_card(type="Creature - Bear")], {"2ED"})
+        assert result[0].type_line == "Creature - Bear"
