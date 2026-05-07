@@ -1,12 +1,9 @@
 [project]
 name = "kamir"
-version = "0.1.0"
-description = "Printable proxy card generator for a Momir Basic-like MTG variant"
+version = "0.2.0"
+description = "Interactive Momir Basic play tool for Raspberry Pi + thermal printer"
 requires-python = ">=3.11"
 dependencies = [
-    "pillow>=10.0",
-    "reportlab>=4.0",
-    "requests>=2.31",
     "tqdm>=4.66",
 ]
 
