@@ -3,13 +3,18 @@ import sqlite3
 import time
 from pathlib import Path
 
+from tqdm import tqdm
+
 from kamir.domain import Card
-from kamir.printer.image import HEIGHT_DOTS, WIDTH_DOTS, fetch_art
+from kamir.printer.image import (
+    HEIGHT_DOTS,
+    WIDTH_DOTS,
+    batch_fetch_art_crop_urls,
+    fetch_art_from_url,
+)
 from kamir.printer.render import RasterImage
 
 log = logging.getLogger(__name__)
-
-_SCRYFALL_DELAY = 0.05  # seconds between downloads; Scryfall asks for 50-100 ms
 
 
 def fetch_and_store_art(db_path: Path, cards: list[Card]) -> None:
@@ -32,27 +37,51 @@ def fetch_and_store_art(db_path: Path, cards: list[Card]) -> None:
             log.info("Art: all %d cards already cached", len(cards))
             return
 
-        log.info("Art: downloading %d cards...", total)
-        ok = 0
-        for i, card in enumerate(pending, 1):
-            art = fetch_art(card)
-            if art is not None:
-                cur.execute(
-                    "UPDATE cards SET art_raster = ? WHERE name = ?",
-                    (art.data, card.name),
-                )
-                conn.commit()
-                ok += 1
-            if i % 100 == 0:
-                log.info("Art: %d/%d (%d stored)", i, total, ok)
-            time.sleep(_SCRYFALL_DELAY)
+        # Phase 1 — batch-fetch art_crop URLs (fast: ~N/75 API requests)
+        n_batches = (total + 74) // 75
+        log.info("Art: fetching metadata for %d cards (%d batches)...", total, n_batches)
+        art_urls = batch_fetch_art_crop_urls(pending)
+        log.info("Art: %d/%d URLs resolved", len(art_urls), total)
 
+        # Phase 2 — download images (slow: one CDN request per card)
+        ok = 0
+        with tqdm(pending, desc="Art", unit="card", dynamic_ncols=True) as bar:
+            for card in bar:
+                url = art_urls.get(card.name)
+                if url:
+                    art = fetch_art_from_url(url)
+                    if art is not None:
+                        cur.execute(
+                            "UPDATE cards SET art_raster = ? WHERE name = ?",
+                            (art.data, card.name),
+                        )
+                        conn.commit()
+                        ok += 1
+                bar.set_postfix(ok=ok, fail=bar.n - ok)
+
+        tqdm.write(f"Art: complete — {ok}/{total} images stored")
         log.info("Art: complete — %d/%d images stored", ok, total)
         if ok == 0:
             log.warning(
                 "Art: no images were stored — check network access, "
                 "or re-run `kamir build-db` once the network is available"
             )
+    finally:
+        conn.close()
+
+
+def art_stats(db_path: Path) -> tuple[int, int] | None:
+    """Return (total_cards, cards_with_art), or None if the DB doesn't exist or is incompatible."""
+    if not db_path.exists():
+        return None
+    conn = sqlite3.connect(db_path)
+    try:
+        row = conn.execute(
+            "SELECT COUNT(*) AS total, COUNT(art_raster) AS with_art FROM cards"
+        ).fetchone()
+        return (row[0], row[1])
+    except sqlite3.OperationalError:
+        return None
     finally:
         conn.close()
 

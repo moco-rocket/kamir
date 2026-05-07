@@ -3,7 +3,7 @@ import logging
 from pathlib import Path
 
 from kamir import config as cfg_mod
-from kamir.db.art import fetch_and_store_art, load_art
+from kamir.db.art import art_stats, fetch_and_store_art, load_art
 from kamir.db.load import open_source, iter_raw_cards
 from kamir.db.write import create_kamir_db, insert_cards
 from kamir.filter.cards import filter_cards
@@ -87,6 +87,21 @@ def stage_play(cfg: dict) -> None:
             log.error("Print failed for '%s': %s", card.name, e)
 
 
+def stage_art_status(cfg: dict) -> None:
+    db_path = cfg["paths"]["kamir_db"]
+    stats = art_stats(db_path)
+    if stats is None:
+        print("  カードプールが見つかりません。先に 'kamir build-db' を実行してください。")
+        return
+    total, with_art = stats
+    pct = 100 * with_art // total if total else 0
+    print(f"  カード総数: {total}")
+    print(f"  アート取得済み: {with_art} ({pct}%)")
+    if with_art < total:
+        missing = total - with_art
+        print(f"  未取得: {missing} — 'kamir build-db' を再実行してダウンロードできます。")
+
+
 def stage_print_test(cfg: dict, mana_value: int) -> None:
     db_path = cfg["paths"]["kamir_db"]
     device = cfg["printer"]["device"]
@@ -122,6 +137,7 @@ def main() -> None:
     sub = parser.add_subparsers(dest="command", required=True)
     sub.add_parser("build-db", help="Build kamir_cardpool.sqlite from AllPrintings.sqlite")
     sub.add_parser("play", help="Start an interactive Momir Basic play session")
+    sub.add_parser("art-status", help="Show how many cards have art downloaded")
     pt = sub.add_parser("print-test", help="Print a random card at a given mana value (hardware test)")
     pt.add_argument("--mv", type=int, required=True, metavar="N", help="Mana value")
 
@@ -137,5 +153,7 @@ def main() -> None:
         stage_build_db(cfg)
     elif args.command == "play":
         stage_play(cfg)
+    elif args.command == "art-status":
+        stage_art_status(cfg)
     elif args.command == "print-test":
         stage_print_test(cfg, args.mv)
