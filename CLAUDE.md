@@ -18,8 +18,8 @@ Keep the following concerns strictly separate. Do not mix them in a single modul
 | `kamir/domain.py` | `Card` frozen dataclass — shared by all subsystems |
 | `kamir/db/` | Loading MTGJSON (`AllPrintings.sqlite`) and writing the card pool DB |
 | `kamir/filter/` | Card filtering logic (pure functions, no I/O); also `to_card()` and text utilities |
-| `kamir/play/` | Interactive game session: random creature selection and terminal display *(Phase 2)* |
-| `kamir/printer/` | ESC/POS text rendering and MJ-5890K hardware I/O *(Phase 3)* |
+| `kamir/play/` | Interactive game session: random creature selection and terminal display |
+| `kamir/printer/` | ESC/POS text rendering and MJ-5890K hardware I/O |
 | `kamir/cli.py` | CLI entry point only; no business logic |
 | `kamir/config.py` | Configuration loading from `config.toml` |
 

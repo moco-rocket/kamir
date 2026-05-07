@@ -33,7 +33,7 @@ uv run kamir build-db
 # カードプールDBを構築（AllPrintings.sqlite から）
 uv run kamir build-db
 
-# ゲームセッション開始（Phase 2 で実装予定）
+# ゲームセッション開始
 uv run kamir play
 
 # デバッグログを有効にする
@@ -81,8 +81,8 @@ kamir/
 ├── config.py       # 設定読み込み
 ├── db/             # MTGJSONロードおよびDB書き込み
 ├── filter/         # カードフィルタリング（純粋関数）+ to_card()
-├── play/           # ゲームセッション (Phase 2)
-└── printer/        # ESC/POS描画 + MJ-5890K送信 (Phase 3)
+├── play/           # ゲームセッション
+└── printer/        # ESC/POS描画 + MJ-5890K送信
 ```
 
 詳細は [docs/architecture.md](docs/architecture.md) を参照してください。
@@ -92,6 +92,6 @@ kamir/
 | フェーズ | 内容 | 状態 |
 |---|---|---|
 | Phase 1 | Card ドメインモデル、DBビルダー、モジュール整理 | ✅ 完了 |
-| Phase 2 | プレイアプリ（対話型クリーチャー選択・ターミナル表示） | 実装中 |
-| Phase 3 | 印刷（ESC/POSテキスト描画・MJ-5890K送信） | 未着手 |
+| Phase 2 | プレイアプリ（対話型クリーチャー選択・ターミナル表示） | ✅ 完了 |
+| Phase 3 | 印刷（ESC/POSテキスト描画・MJ-5890K送信） | ✅ 完了 |
 | Phase 4 | Raspberry Pi実機テスト・設定調整 | 未着手 |

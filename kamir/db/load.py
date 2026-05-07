@@ -29,9 +29,7 @@ def iter_raw_cards(conn: sqlite3.Connection) -> list[dict]:
             c.side,
             c.isFunny,
             c.isReprint,
-            s.baseSetSize,
-            s.releaseDate,
-            s.id AS set_row_id
+            s.baseSetSize
         FROM cards c
         JOIN sets s ON c.setCode = s.code
         """

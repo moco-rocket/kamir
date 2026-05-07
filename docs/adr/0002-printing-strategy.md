@@ -67,8 +67,8 @@ type line, oracle text, P/T) and send it as ESC/POS text commands.
 - No network access is needed at game time.
 - The rendering logic is a pure function (`Card → list[Instruction]`) that is trivially
   testable without hardware.
-- `python-escpos` handles the MJ-5890K natively via USB; no CUPS or system printer
-  configuration is required.
+- Raw bytes are written directly to the device file (`/dev/usb/lp0`); no CUPS or system
+  printer configuration is required, and no additional Python library is needed.
 - Minimal paper usage: a typical card takes 6–10 cm of 58mm receipt paper.
 
 **Trade-offs**:
@@ -81,7 +81,7 @@ type line, oracle text, P/T) and send it as ESC/POS text commands.
 
 ## Decision
 
-**Option C**: ESC/POS text re-render using `python-escpos`.
+**Option C**: ESC/POS text re-render via raw byte writes to the device file.
 
 The printed slip is a re-composed layout of the card's game-relevant data, not a copy
 of the original card frame. This is consistent with the project's goals: a readable,
@@ -105,10 +105,10 @@ In summary:
 
 ## Consequences
 
-- `python-escpos` is added to `pyproject.toml` as a runtime dependency.
-- `kamir/printer/render.py` contains the pure text layout logic.
-- `kamir/printer/send.py` owns the USB connection and ESC/POS transmission.
-- `config.toml` gains a `[printer]` section for the device path and USB IDs.
+- No additional runtime dependency is added; only stdlib `open()` and raw bytes are needed.
+- `kamir/printer/render.py` contains the pure text layout logic (returns `list[Instruction]`).
+- `kamir/printer/send.py` encodes instructions to ESC/POS bytes and writes them to the device file.
+- `config.toml` gains a `[printer]` section with a single `device` key (device file path).
 - No Scryfall API calls occur during gameplay.
 - No artwork images are stored on disk.
 - `Pillow`, `ReportLab`, and `requests` are removed from the runtime dependency set.
