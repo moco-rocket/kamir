@@ -28,7 +28,7 @@ def stage_build_db(cfg: dict, force: bool = False) -> None:
     log.info("Opening source database: %s", paths["mtgjson_db"])
     src_conn = open_source(paths["mtgjson_db"])
 
-    if allowed_cfg == "*":
+    if allowed_cfg == "*" or allowed_cfg == ["*"]:
         allowed = all_set_codes(src_conn)
         log.info("sets = \"*\": resolved to %d set codes", len(allowed))
     else:
