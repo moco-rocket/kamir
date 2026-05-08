@@ -8,7 +8,12 @@ log_file   = "logs/kamir.log"
 auto_print = true
 
 [printer]
-# USB device path on Raspberry Pi (check with: ls /dev/usb/lp*)
+# Linux (Raspberry Pi): USB device path — check with: ls /dev/usb/lp*
+#   device = "/dev/usb/lp0"
+# macOS: device file — check with: ls /dev/cu.usb* or ls /dev/tty.usb*
+#   device = "/dev/cu.usbmodemXXXX"
+# macOS: CUPS printer name — check with: lpstat -p
+#   device = "MJ-5890K"
 device = "/dev/usb/lp0"
 
 [sets]

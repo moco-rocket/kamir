@@ -1,5 +1,7 @@
 import logging
 import os
+import subprocess
+from pathlib import Path
 
 from kamir.domain import Card
 from kamir.printer.render import Cut, Instruction, RasterImage, Rule, TextLine, render_card
@@ -77,9 +79,22 @@ def _encode(instructions: list[Instruction]) -> bytes:
 
 
 def print_card(card: Card, device: str, art: RasterImage | None = None) -> None:
-    """Render card and write ESC/POS bytes to the thermal printer device."""
+    """Render card and write ESC/POS bytes to the printer.
+
+    device is either a device file path (e.g. /dev/usb/lp0 on Linux,
+    /dev/cu.usbmodem* on macOS) or a CUPS printer name (macOS/Linux).
+    If the path exists as a file, bytes are written directly via os.write().
+    Otherwise the data is piped to: lp -d <device> -o raw
+    """
     data = _encode(render_card(card, art))
     log.debug("print_card: %d B → %s", len(data), device)
+    if Path(device).exists():
+        _write_device(data, device)
+    else:
+        _write_lp(data, device)
+
+
+def _write_device(data: bytes, device: str) -> None:
     fd = os.open(device, os.O_WRONLY)
     try:
         pos = 0
@@ -87,3 +102,11 @@ def print_card(card: Card, device: str, art: RasterImage | None = None) -> None:
             pos += os.write(fd, data[pos:])
     finally:
         os.close(fd)
+
+
+def _write_lp(data: bytes, printer: str) -> None:
+    subprocess.run(
+        ["lp", "-d", printer, "-o", "raw"],
+        input=data,
+        check=True,
+    )
