@@ -8,7 +8,6 @@ from kamir.db.load import open_source, iter_raw_cards, all_set_codes
 from kamir.db.write import create_kamir_db, insert_cards
 from kamir.filter.cards import filter_cards
 from kamir.play.display import format_card
-from kamir.play.gpio_session import GpioPlaySession
 from kamir.play.select import select_creature, find_by_name
 from kamir.printer.send import print_card
 from kamir.utils import log as log_mod
@@ -135,7 +134,6 @@ def stage_gpio_play(cfg: dict) -> None:
         min_mv, max_mv, initial_mv, db_path, device,
     )
     print("  GPIO mode is not wired yet — ハードウェア接続後に再実行してください。")
-    _ = GpioPlaySession(db_path, device, initial_mv=initial_mv, min_mv=min_mv, max_mv=max_mv)
 
 
 def stage_print_test(
