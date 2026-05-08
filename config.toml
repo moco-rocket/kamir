@@ -12,9 +12,10 @@ auto_print = true
 device = "/dev/usb/lp0"
 
 [sets]
-# Set allowed = "*" to include every physical-play set in AllPrintings.sqlite
-# (expansions, core sets, Commander, Masters, etc.) excluding Un-sets and
-# digital-only sets.  Or specify an explicit list of set codes as shown below.
+# Set allowed = "*" or allowed = ["*"] to include every physical-play set in
+# AllPrintings.sqlite (expansions, core sets, Commander, Masters, etc.)
+# excluding Un-sets and digital-only sets.
+# Or specify an explicit list of set codes as shown below.
 allowed = [
     "LEA", "2ED", "ARN", "ATQ", "3ED", "LEG", "PDRC", "DRK", "PHPR", "FEM",
     "4ED", "ICE", "HML", "ALL", "MIR", "VIS", "5ED", "POR", "WTH",

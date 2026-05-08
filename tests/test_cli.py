@@ -3,7 +3,7 @@ from unittest.mock import patch, MagicMock
 
 import pytest
 
-from kamir.cli import stage_play
+from kamir.cli import stage_build_db, stage_play
 from kamir.db.write import create_kamir_db, insert_cards
 from kamir.domain import Card
 
@@ -39,6 +39,47 @@ def _cfg(db_path: Path, auto_print: bool) -> dict:
         "printer": {"device": "/dev/null"},
         "play": {"auto_print": auto_print},
     }
+
+
+class TestBuildDbWildcard:
+    def _cfg(self, tmp_path, allowed, src_db):
+        return {
+            "paths": {"mtgjson_db": src_db, "kamir_db": tmp_path / "out.sqlite"},
+            "sets": {"allowed": allowed},
+        }
+
+    def test_string_wildcard_uses_all_set_codes(self, tmp_path, mocker):
+        mock_all = mocker.patch("kamir.cli.all_set_codes", return_value={"2ED"})
+        mocker.patch("kamir.cli.open_source")
+        mocker.patch("kamir.cli.iter_raw_cards", return_value=[])
+        mocker.patch("kamir.cli.filter_cards", return_value=[])
+        mocker.patch("kamir.cli.create_kamir_db")
+        mocker.patch("kamir.cli.insert_cards")
+        mocker.patch("kamir.cli.fetch_and_store_art")
+        stage_build_db(self._cfg(tmp_path, "*", tmp_path / "src.sqlite"))
+        mock_all.assert_called_once()
+
+    def test_list_wildcard_uses_all_set_codes(self, tmp_path, mocker):
+        mock_all = mocker.patch("kamir.cli.all_set_codes", return_value={"2ED"})
+        mocker.patch("kamir.cli.open_source")
+        mocker.patch("kamir.cli.iter_raw_cards", return_value=[])
+        mocker.patch("kamir.cli.filter_cards", return_value=[])
+        mocker.patch("kamir.cli.create_kamir_db")
+        mocker.patch("kamir.cli.insert_cards")
+        mocker.patch("kamir.cli.fetch_and_store_art")
+        stage_build_db(self._cfg(tmp_path, ["*"], tmp_path / "src.sqlite"))
+        mock_all.assert_called_once()
+
+    def test_explicit_list_does_not_use_all_set_codes(self, tmp_path, mocker):
+        mock_all = mocker.patch("kamir.cli.all_set_codes", return_value={"2ED"})
+        mocker.patch("kamir.cli.open_source")
+        mocker.patch("kamir.cli.iter_raw_cards", return_value=[])
+        mocker.patch("kamir.cli.filter_cards", return_value=[])
+        mocker.patch("kamir.cli.create_kamir_db")
+        mocker.patch("kamir.cli.insert_cards")
+        mocker.patch("kamir.cli.fetch_and_store_art")
+        stage_build_db(self._cfg(tmp_path, ["2ED", "LEA"], tmp_path / "src.sqlite"))
+        mock_all.assert_not_called()
 
 
 class TestAutoprint:
