@@ -8,6 +8,7 @@ from kamir.db.load import open_source, iter_raw_cards, all_set_codes
 from kamir.db.write import create_kamir_db, insert_cards
 from kamir.filter.cards import filter_cards
 from kamir.play.display import format_card
+from kamir.play.gpio_session import GpioPlaySession
 from kamir.play.select import select_creature, find_by_name
 from kamir.printer.send import print_card
 from kamir.utils import log as log_mod
@@ -121,6 +122,22 @@ def stage_art_status(cfg: dict) -> None:
         print(f"  未取得: {missing} — 'kamir build-db' を再実行してダウンロードできます。")
 
 
+def stage_gpio_play(cfg: dict) -> None:
+    gpio_cfg = cfg.get("gpio", {}).get("play", {})
+    initial_mv = gpio_cfg.get("initial_mana_value", 0)
+    min_mv = gpio_cfg.get("min_mana_value", 0)
+    max_mv = gpio_cfg.get("max_mana_value", 16)
+    db_path = cfg["paths"]["kamir_db"]
+    device = cfg["printer"]["device"]
+
+    log.info(
+        "GPIO play mode is not wired yet — MV range [%d, %d], initial %d, db=%s, device=%s",
+        min_mv, max_mv, initial_mv, db_path, device,
+    )
+    print("  GPIO mode is not wired yet — ハードウェア接続後に再実行してください。")
+    _ = GpioPlaySession(db_path, device, initial_mv=initial_mv, min_mv=min_mv, max_mv=max_mv)
+
+
 def stage_print_test(
     cfg: dict,
     mana_value: int | None = None,
@@ -167,6 +184,7 @@ def main() -> None:
     bdb = sub.add_parser("build-db", help="Build kamir_cardpool.sqlite from AllPrintings.sqlite")
     bdb.add_argument("--force", action="store_true", help="Drop and recreate the DB (re-downloads all art)")
     sub.add_parser("play", help="Start an interactive Momir Basic play session")
+    sub.add_parser("gpio-play", help="Start a GPIO button-driven play session (Raspberry Pi)")
     sub.add_parser("art-status", help="Show how many cards have art downloaded")
     pt = sub.add_parser("print-test", help="Print a card for hardware testing")
     pt_group = pt.add_mutually_exclusive_group(required=True)
@@ -185,6 +203,8 @@ def main() -> None:
         stage_build_db(cfg, force=args.force)
     elif args.command == "play":
         stage_play(cfg)
+    elif args.command == "gpio-play":
+        stage_gpio_play(cfg)
     elif args.command == "art-status":
         stage_art_status(cfg)
     elif args.command == "print-test":
