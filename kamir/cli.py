@@ -148,8 +148,21 @@ def stage_gpio_play(cfg: dict) -> None:
     if display_cfg:
         try:
             from kamir.hardware.tm1637_display import Tm1637Display
-            display = Tm1637Display(clk=display_cfg["clk"], dio=display_cfg["dio"])
-            log.info("TM1637 display on CLK=%s DIO=%s", display_cfg["clk"], display_cfg["dio"])
+            display = Tm1637Display(
+                clk=display_cfg["clk"],
+                dio=display_cfg["dio"],
+                brightness=display_cfg.get("brightness", 7),
+                digits=display_cfg.get("digits", 4),
+                visible_digits=display_cfg.get("visible_digits", 2),
+                right_align=display_cfg.get("right_align", True),
+            )
+            log.info(
+                "TM1637 display on CLK=%s DIO=%s (brightness=%s digits=%s visible=%s)",
+                display_cfg["clk"], display_cfg["dio"],
+                display_cfg.get("brightness", 7),
+                display_cfg.get("digits", 4),
+                display_cfg.get("visible_digits", 2),
+            )
         except ImportError as e:
             log.warning("TM1637 display unavailable: %s — running without display", e)
 
@@ -171,9 +184,15 @@ def stage_gpio_play(cfg: dict) -> None:
         error_led=error_led,
     )
 
-    log.info("Starting GPIO play session. Press POWER button to shut down.")
+    bounce_time = play_cfg.get("bounce_time", 0.05)
+    hold_time   = play_cfg.get("hold_time", 1.0)
+    log.info(
+        "Starting GPIO play session. Long-press POWER to stop "
+        "(bounce=%.2fs hold=%.1fs).",
+        bounce_time, hold_time,
+    )
     try:
-        _gpio_run(session, buttons_cfg)
+        _gpio_run(session, buttons_cfg, bounce_time=bounce_time, hold_time=hold_time)
     except ImportError as e:
         print(f"  GPIO ライブラリが見つかりません: {e}")
         log.error("GPIO runner failed: %s", e)
