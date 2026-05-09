@@ -176,7 +176,9 @@ kamir build-db --force
    cd kamir
    uv sync
    ```
-3. Create `config.toml` in the project root (see README for the full template).
+3. Create `config.toml` and set its location (see README for the full template).
+   With `uv sync`, placing it in the repository root and running `kamir` from there is sufficient.
+   With `uv tool install`, set `KAMIR_CONFIG=/path/to/config.toml` or use `--config`.
 4. Place `AllPrintings.sqlite` in `data/db/` and build the card pool:
    ```bash
    mkdir -p data/db

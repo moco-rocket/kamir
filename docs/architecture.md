@@ -104,7 +104,7 @@ kamir-rewrite/
 │   ├── __init__.py
 │   ├── __main__.py
 │   ├── cli.py              # Argument parsing; wires subsystems together
-│   ├── config.py           # Load config.toml
+│   ├── config.py           # Resolve and load config.toml (--config > $KAMIR_CONFIG > CWD)
 │   ├── domain.py           # Card dataclass (shared by all subsystems)
 │   ├── db/
 │   │   ├── __init__.py
@@ -236,6 +236,14 @@ Player input (mana value)
 ---
 
 ## Configuration (`config.toml`)
+
+`config.toml` は以下の優先順位で解決されます:
+
+1. `--config <path>` CLI 引数
+2. `KAMIR_CONFIG` 環境変数
+3. カレントディレクトリの `config.toml`
+
+`[paths]` 内の相対パスはすべて **config.toml が置かれているディレクトリ** を基点に解決されます。
 
 ```toml
 [paths]
