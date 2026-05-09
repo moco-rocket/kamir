@@ -47,11 +47,28 @@ source .venv/bin/activate
 ```
 
 Raspberry Pi で常用する場合は `~/.bashrc` に以下を追記するか、
-`uv tool install --editable .` でシステム全体にインストールすることもできます。
+`uv tool install` でシステム全体にインストールすることもできます。
 
 ```bash
 # ~/.bashrc に追記する場合（KAMIR_DIR はリポジトリのパスに合わせて変更）
 export PATH="$HOME/kamir/.venv/bin:$PATH"
+```
+
+`uv tool install` でインストールした場合は、`config.toml` の場所を明示する必要があります
+（インストール先ディレクトリとは無関係になるため）。
+
+```bash
+uv tool install git+https://github.com/moco-rocket/kamir.git
+
+# 方法 A: 環境変数で固定（systemd や .bashrc に設定）
+export KAMIR_CONFIG=/home/pi/kamir-data/config.toml
+kamir play
+
+# 方法 B: 実行のたびに指定
+kamir --config /home/pi/kamir-data/config.toml play
+
+# 方法 C: config.toml のあるディレクトリに cd してから実行
+cd /home/pi/kamir-data && kamir play
 ```
 
 ## Raspberry Pi ハードウェア準備
@@ -126,7 +143,16 @@ pytest
 
 ## 設定
 
-プロジェクトルートに `config.toml` を作成します。
+`config.toml` の探索順序は以下の通りです:
+
+1. `--config <path>` 引数で明示した場合
+2. 環境変数 `KAMIR_CONFIG` が設定されている場合
+3. カレントディレクトリの `config.toml`
+
+`uv sync` を使った開発環境ではリポジトリルートから実行するため 3 が自然に機能します。
+`uv tool install` でインストールした場合は 1 か 2 を利用してください。
+
+`config.toml` の内容:
 
 ```toml
 [paths]
