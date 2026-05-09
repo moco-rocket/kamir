@@ -117,7 +117,7 @@ class TestSummon:
             assert session.last_card is None
 
     def test_ignored_while_printing(self, session):
-        session._printing = True
+        session._print_lock.acquire()
         with patch("kamir.play.gpio_session.select_creature") as mock_sel:
             session.summon()
             mock_sel.assert_not_called()
@@ -131,23 +131,23 @@ class TestSummon:
         ):
             session.summon()  # should not raise
 
-    def test_printing_flag_cleared_after_success(self, session):
+    def test_lock_released_after_success(self, session):
         with (
             patch("kamir.play.gpio_session.select_creature", return_value=_card()),
             patch("kamir.play.gpio_session.load_art", return_value=None),
             patch("kamir.play.gpio_session.print_card"),
         ):
             session.summon()
-            assert not session._printing
+            assert not session._print_lock.locked()
 
-    def test_printing_flag_cleared_after_error(self, session):
+    def test_lock_released_after_error(self, session):
         with (
             patch("kamir.play.gpio_session.select_creature", return_value=_card()),
             patch("kamir.play.gpio_session.load_art", return_value=None),
             patch("kamir.play.gpio_session.print_card", side_effect=OSError("no device")),
         ):
             session.summon()
-            assert not session._printing
+            assert not session._print_lock.locked()
 
 
 class TestReprintLast:
@@ -169,7 +169,7 @@ class TestReprintLast:
             mock_print.assert_not_called()
 
     def test_ignored_while_printing(self, session):
-        session._printing = True
+        session._print_lock.acquire()
         session.last_card = _card()
         with patch("kamir.play.gpio_session.print_card") as mock_print:
             session.reprint_last()
@@ -183,14 +183,33 @@ class TestReprintLast:
         ):
             session.reprint_last()  # should not raise
 
-    def test_printing_flag_cleared_after_reprint_error(self, session):
+    def test_lock_released_after_reprint_error(self, session):
         session.last_card = _card()
         with (
             patch("kamir.play.gpio_session.load_art", return_value=None),
             patch("kamir.play.gpio_session.print_card", side_effect=OSError("gone")),
         ):
             session.reprint_last()
-            assert not session._printing
+            assert not session._print_lock.locked()
+
+
+class TestShutdown:
+    def test_shutdown_sets_event(self):
+        import threading
+        s = GpioPlaySession(Path("x.sqlite"), "/dev/null")
+        assert not s._shutdown_event.is_set()
+        s.shutdown()
+        assert s._shutdown_event.is_set()
+
+    def test_wait_for_shutdown_unblocks_after_shutdown(self):
+        import threading
+        s = GpioPlaySession(Path("x.sqlite"), "/dev/null")
+        unblocked = threading.Event()
+        t = threading.Thread(target=lambda: (s.wait_for_shutdown(), unblocked.set()), daemon=True)
+        t.start()
+        s.shutdown()
+        t.join(timeout=1.0)
+        assert unblocked.is_set()
 
 
 @pytest.fixture
