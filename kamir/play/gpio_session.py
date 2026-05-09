@@ -1,4 +1,5 @@
 import logging
+import threading
 from pathlib import Path
 
 from kamir.db.art import load_art
@@ -28,7 +29,8 @@ class GpioPlaySession:
         self.max_mana_value = max_mv
         self.current_mv = initial_mv
         self.last_card: Card | None = None
-        self._printing = False
+        self._print_lock = threading.Lock()
+        self._shutdown_event = threading.Event()
         self._display = display
         self._error_led = error_led
         if self._display is not None:
@@ -52,10 +54,9 @@ class GpioPlaySession:
             self._display.show_value(self.current_mv)
 
     def summon(self) -> None:
-        if self._printing:
+        if not self._print_lock.acquire(blocking=False):
             log.debug("summon() ignored: print in progress")
             return
-        self._printing = True
         try:
             if self._display is not None:
                 self._display.show_busy(self.current_mv)
@@ -81,15 +82,15 @@ class GpioPlaySession:
                 if self._error_led is not None:
                     self._error_led.blink()
         finally:
-            self._printing = False
+            self._print_lock.release()
 
     def reprint_last(self) -> None:
-        if self._printing:
+        if not self._print_lock.acquire(blocking=False):
             log.debug("reprint_last() ignored: print in progress")
             return
         if self.last_card is None:
+            self._print_lock.release()
             return
-        self._printing = True
         try:
             if self._display is not None:
                 self._display.show_busy(self.current_mv)
@@ -105,9 +106,13 @@ class GpioPlaySession:
             if self._error_led is not None:
                 self._error_led.blink()
         finally:
-            self._printing = False
+            self._print_lock.release()
+
+    def wait_for_shutdown(self) -> None:
+        self._shutdown_event.wait()
 
     def shutdown(self) -> None:
         log.info("shutdown() called — hardware shutdown not wired yet")
         if self._display is not None:
             self._display.show_off()
+        self._shutdown_event.set()
