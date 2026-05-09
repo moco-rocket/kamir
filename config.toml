@@ -43,16 +43,22 @@ allowed = [
 # initial_mana_value = 0
 # min_mana_value     = 0
 # max_mana_value     = 16
+# bounce_time        = 0.05   # seconds; debounce window for all buttons
+# hold_time          = 1.0    # seconds; threshold to trigger long-press actions
 #
-# [gpio.buttons]          # BCM pin numbers
-# mv_up   = 17
-# mv_down = 27
-# summon  = 22
-# power   = 23
+# [gpio.buttons]   # BCM pin numbers
+# power   = 5
+# mv_down = 13
+# mv_up   = 19
+# summon  = 26
 #
 # [gpio.display]          # TM1637 4-digit 7-segment LED
-# clk = 24
-# dio = 25
+# clk            = 23
+# dio            = 24
+# brightness     = 2      # 0–7
+# digits         = 4      # total digit count of the module
+# visible_digits = 2      # rightmost N digits used for MV
+# right_align    = true
 #
 # [gpio.error_led]        # single LED for error indication
-# pin = 18
+# pin = 21
