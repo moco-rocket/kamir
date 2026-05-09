@@ -1,6 +1,6 @@
 from kamir.domain import Card
 from kamir.printer.render import RasterImage, render_card
-from kamir.printer.send import _encode, _BOLD_ON, _CUT_FULL, _ESC_STAR, _INIT, print_card
+from kamir.printer.send import _encode, _BOLD_ON, _CUT_FULL, _ESC_STAR, _INIT, print_card, _write_lp
 
 
 def _card(**overrides) -> Card:
@@ -70,3 +70,13 @@ class TestPrintCard:
         device.touch()
         print_card(_card(), str(device), art)
         assert _ESC_STAR in device.read_bytes()
+
+    def test_uses_lp_when_device_path_does_not_exist(self, mocker):
+        mock_run = mocker.patch("kamir.printer.send.subprocess.run")
+        print_card(_card(), "MJ-5890K")
+        mock_run.assert_called_once()
+        args = mock_run.call_args[0][0]
+        assert args == ["lp", "-d", "MJ-5890K", "-o", "raw"]
+        sent = mock_run.call_args[1]["input"]
+        assert _INIT in sent
+        assert _CUT_FULL in sent
