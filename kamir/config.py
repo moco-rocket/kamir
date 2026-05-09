@@ -1,10 +1,19 @@
+import os
 import tomllib
 from pathlib import Path
 
-_ROOT = Path(__file__).parent.parent
+
+def find(path: Path | None = None) -> Path:
+    """Resolve config path: explicit arg > KAMIR_CONFIG env var > CWD/config.toml."""
+    if path is not None:
+        return path
+    env = os.environ.get("KAMIR_CONFIG")
+    if env:
+        return Path(env)
+    return Path.cwd() / "config.toml"
 
 
 def load(path: Path | None = None) -> dict:
-    config_path = path or (_ROOT / "config.toml")
+    config_path = find(path)
     with open(config_path, "rb") as f:
         return tomllib.load(f)

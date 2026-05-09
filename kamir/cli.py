@@ -257,8 +257,9 @@ def main() -> None:
 
     args = parser.parse_args()
 
-    raw_cfg = cfg_mod.load(args.config)
-    root = (args.config.parent if args.config else Path(".")).resolve()
+    config_path = cfg_mod.find(args.config)
+    raw_cfg = cfg_mod.load(config_path)
+    root = config_path.parent.resolve()
     cfg = _resolve(raw_cfg, root)
 
     log_mod.setup(cfg["paths"]["log_file"], level=logging.DEBUG if args.debug else logging.INFO)
