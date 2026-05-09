@@ -225,7 +225,7 @@ def main() -> None:
     bdb = sub.add_parser("build-db", help="Build kamir_cardpool.sqlite from AllPrintings.sqlite")
     bdb.add_argument("--force", action="store_true", help="Drop and recreate the DB (re-downloads all art)")
     sub.add_parser("play", help="Start an interactive Momir Basic play session")
-    sub.add_parser("gpio-play", help="GPIO button-driven play session (Raspberry Pi) [not yet wired]")
+    sub.add_parser("gpio-play", help="GPIO button-driven play session (Raspberry Pi)")
     sub.add_parser("art-status", help="Show how many cards have art downloaded")
     pt = sub.add_parser("print-test", help="Print a card for hardware testing")
     pt_group = pt.add_mutually_exclusive_group(required=True)
