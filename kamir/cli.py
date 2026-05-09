@@ -241,7 +241,7 @@ def main() -> None:
         prog="kamir",
         description="Kamir — Momir Basic play tool for Raspberry Pi",
     )
-    parser.add_argument("--config", type=Path, default=None, help="Path to config.toml")
+    parser.add_argument("--config", type=Path, default=None, help="Path to config.toml (default: $KAMIR_CONFIG or ./config.toml)")
     parser.add_argument("--debug", action="store_true")
 
     sub = parser.add_subparsers(dest="command", required=True)
