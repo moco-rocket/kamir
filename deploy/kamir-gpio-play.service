@@ -1,0 +1,16 @@
+[Unit]
+Description=Kamir GPIO Play Session
+After=network.target
+
+[Service]
+Type=simple
+User=pi
+WorkingDirectory=/home/pi/kamir
+ExecStart=/home/pi/kamir/.venv/bin/kamir gpio-play
+Restart=on-failure
+RestartSec=5s
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target

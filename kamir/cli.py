@@ -122,18 +122,61 @@ def stage_art_status(cfg: dict) -> None:
 
 
 def stage_gpio_play(cfg: dict) -> None:
-    gpio_cfg = cfg.get("gpio", {}).get("play", {})
-    initial_mv = gpio_cfg.get("initial_mana_value", 0)
-    min_mv = gpio_cfg.get("min_mana_value", 0)
-    max_mv = gpio_cfg.get("max_mana_value", 16)
-    db_path = cfg["paths"]["kamir_db"]
-    device = cfg["printer"]["device"]
+    from kamir.play.gpio_runner import run as _gpio_run
+    from kamir.play.gpio_session import GpioPlaySession
 
-    log.info(
-        "GPIO play mode is not wired yet — MV range [%d, %d], initial %d, db=%s, device=%s",
-        min_mv, max_mv, initial_mv, db_path, device,
+    gpio_cfg   = cfg.get("gpio", {})
+    play_cfg   = gpio_cfg.get("play", {})
+    buttons_cfg = gpio_cfg.get("buttons", {})
+    display_cfg = gpio_cfg.get("display")
+    led_cfg     = gpio_cfg.get("error_led")
+
+    db_path = cfg["paths"]["kamir_db"]
+    device  = cfg["printer"]["device"]
+
+    if not db_path.exists():
+        print("  カードプールが見つかりません。先に 'kamir build-db' を実行してください。")
+        log.error("Card pool not found: %s", db_path)
+        return
+
+    if not buttons_cfg:
+        print("  [gpio.buttons] の設定がありません。config.toml を確認してください。")
+        log.error("No [gpio.buttons] config found.")
+        return
+
+    display = None
+    if display_cfg:
+        try:
+            from kamir.hardware.tm1637_display import Tm1637Display
+            display = Tm1637Display(clk=display_cfg["clk"], dio=display_cfg["dio"])
+            log.info("TM1637 display on CLK=%s DIO=%s", display_cfg["clk"], display_cfg["dio"])
+        except ImportError as e:
+            log.warning("TM1637 display unavailable: %s — running without display", e)
+
+    error_led = None
+    if led_cfg:
+        try:
+            from kamir.hardware.gpio_led import GpioErrorLed
+            error_led = GpioErrorLed(pin=led_cfg["pin"])
+            log.info("Error LED on pin %s", led_cfg["pin"])
+        except ImportError as e:
+            log.warning("GPIO LED unavailable: %s — running without error LED", e)
+
+    session = GpioPlaySession(
+        db_path, device,
+        initial_mv=play_cfg.get("initial_mana_value", 0),
+        min_mv=play_cfg.get("min_mana_value", 0),
+        max_mv=play_cfg.get("max_mana_value", 16),
+        display=display,
+        error_led=error_led,
     )
-    print("  GPIO mode is not wired yet — ハードウェア接続後に再実行してください。")
+
+    log.info("Starting GPIO play session. Press POWER button to shut down.")
+    try:
+        _gpio_run(session, buttons_cfg)
+    except ImportError as e:
+        print(f"  GPIO ライブラリが見つかりません: {e}")
+        log.error("GPIO runner failed: %s", e)
 
 
 def stage_print_test(
