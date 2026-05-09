@@ -14,6 +14,8 @@ from kamir.utils import log as log_mod
 
 log = logging.getLogger(__name__)
 
+_NO_CARD_POOL = "  カードプールが見つかりません。先に 'kamir build-db' を実行してください。"
+
 
 def _resolve(cfg: dict, root: Path) -> dict:
     """Make all configured paths absolute relative to root."""
@@ -57,7 +59,7 @@ def stage_play(cfg: dict) -> None:
     auto_print = cfg.get("play", {}).get("auto_print", True)
 
     if not db_path.exists():
-        print("  カードプールが見つかりません。先に 'kamir build-db' を実行してください。")
+        print(_NO_CARD_POOL)
         log.error("Card pool not found at %s. Run 'kamir build-db' first.", db_path)
         return
 
@@ -110,7 +112,7 @@ def stage_art_status(cfg: dict) -> None:
     db_path = cfg["paths"]["kamir_db"]
     stats = art_stats(db_path)
     if stats is None:
-        print("  カードプールが見つかりません。先に 'kamir build-db' を実行してください。")
+        print(_NO_CARD_POOL)
         return
     total, with_art = stats
     pct = 100 * with_art // total if total else 0
@@ -135,7 +137,7 @@ def stage_gpio_play(cfg: dict) -> None:
     device  = cfg["printer"]["device"]
 
     if not db_path.exists():
-        print("  カードプールが見つかりません。先に 'kamir build-db' を実行してください。")
+        print(_NO_CARD_POOL)
         log.error("Card pool not found: %s", db_path)
         return
 
@@ -148,22 +150,22 @@ def stage_gpio_play(cfg: dict) -> None:
     if display_cfg:
         try:
             from kamir.hardware.tm1637_display import Tm1637Display
-            _brightness     = display_cfg.get("brightness", 7)
-            _digits         = display_cfg.get("digits", 4)
-            _visible_digits = display_cfg.get("visible_digits", 2)
-            _right_align    = display_cfg.get("right_align", True)
+            brightness     = display_cfg.get("brightness", 7)
+            digits         = display_cfg.get("digits", 4)
+            visible_digits = display_cfg.get("visible_digits", 2)
+            right_align    = display_cfg.get("right_align", True)
             display = Tm1637Display(
                 clk=display_cfg["clk"],
                 dio=display_cfg["dio"],
-                brightness=_brightness,
-                digits=_digits,
-                visible_digits=_visible_digits,
-                right_align=_right_align,
+                brightness=brightness,
+                digits=digits,
+                visible_digits=visible_digits,
+                right_align=right_align,
             )
             log.info(
                 "TM1637 display on CLK=%s DIO=%s (brightness=%s digits=%s visible=%s)",
                 display_cfg["clk"], display_cfg["dio"],
-                _brightness, _digits, _visible_digits,
+                brightness, digits, visible_digits,
             )
         except ImportError as e:
             log.warning("TM1637 display unavailable: %s — running without display", e)
@@ -209,7 +211,7 @@ def stage_print_test(
     device = cfg["printer"]["device"]
 
     if not db_path.exists():
-        print("  カードプールが見つかりません。先に 'kamir build-db' を実行してください。")
+        print(_NO_CARD_POOL)
         log.error("Card pool not found at %s.", db_path)
         return
 
