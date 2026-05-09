@@ -1,7 +1,3 @@
-import logging
-
-log = logging.getLogger(__name__)
-
 # 7-segment encodings (common-cathode, bit order: dp-g-f-e-d-c-b-a)
 _DIGIT_SEGS = [0x3f, 0x06, 0x5b, 0x4f, 0x66, 0x6d, 0x7d, 0x07, 0x7f, 0x6f]
 _SEG_DASH   = 0x40  # "-"

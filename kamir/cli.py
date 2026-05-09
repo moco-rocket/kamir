@@ -148,20 +148,22 @@ def stage_gpio_play(cfg: dict) -> None:
     if display_cfg:
         try:
             from kamir.hardware.tm1637_display import Tm1637Display
+            _brightness     = display_cfg.get("brightness", 7)
+            _digits         = display_cfg.get("digits", 4)
+            _visible_digits = display_cfg.get("visible_digits", 2)
+            _right_align    = display_cfg.get("right_align", True)
             display = Tm1637Display(
                 clk=display_cfg["clk"],
                 dio=display_cfg["dio"],
-                brightness=display_cfg.get("brightness", 7),
-                digits=display_cfg.get("digits", 4),
-                visible_digits=display_cfg.get("visible_digits", 2),
-                right_align=display_cfg.get("right_align", True),
+                brightness=_brightness,
+                digits=_digits,
+                visible_digits=_visible_digits,
+                right_align=_right_align,
             )
             log.info(
                 "TM1637 display on CLK=%s DIO=%s (brightness=%s digits=%s visible=%s)",
                 display_cfg["clk"], display_cfg["dio"],
-                display_cfg.get("brightness", 7),
-                display_cfg.get("digits", 4),
-                display_cfg.get("visible_digits", 2),
+                _brightness, _digits, _visible_digits,
             )
         except ImportError as e:
             log.warning("TM1637 display unavailable: %s — running without display", e)

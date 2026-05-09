@@ -1,7 +1,3 @@
-import logging
-
-log = logging.getLogger(__name__)
-
 try:
     from gpiozero import LED as _GpioLED
     _AVAILABLE = True
