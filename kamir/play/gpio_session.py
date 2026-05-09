@@ -112,7 +112,10 @@ class GpioPlaySession:
         self._shutdown_event.wait()
 
     def shutdown(self) -> None:
-        log.info("shutdown() called — hardware shutdown not wired yet")
+        log.info(
+            "shutdown() called — stopping gpio-play process. "
+            "To power off the Pi run: sudo shutdown -h now"
+        )
         if self._display is not None:
             self._display.show_off()
         self._shutdown_event.set()
