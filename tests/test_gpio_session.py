@@ -1,9 +1,11 @@
 from pathlib import Path
-from unittest.mock import patch
+from unittest.mock import MagicMock, call, patch
 
 import pytest
 
 from kamir.domain import Card
+from kamir.hardware.display import ManaDisplay
+from kamir.hardware.leds import ErrorLed
 from kamir.play.gpio_session import GpioPlaySession
 
 
@@ -189,3 +191,153 @@ class TestReprintLast:
         ):
             session.reprint_last()
             assert not session._printing
+
+
+@pytest.fixture
+def display() -> MagicMock:
+    return MagicMock(spec=ManaDisplay)
+
+
+@pytest.fixture
+def error_led() -> MagicMock:
+    return MagicMock(spec=ErrorLed)
+
+
+@pytest.fixture
+def hw_session(display, error_led) -> GpioPlaySession:
+    return GpioPlaySession(
+        db_path=Path("fake.sqlite"),
+        device="/dev/null",
+        initial_mv=3,
+        min_mv=0,
+        max_mv=10,
+        display=display,
+        error_led=error_led,
+    )
+
+
+class TestDisplayIntegration:
+    def test_init_calls_show_value(self, display):
+        GpioPlaySession(Path("x.sqlite"), "/dev/null", initial_mv=5, display=display)
+        display.show_value.assert_called_once_with(5)
+
+    def test_no_display_does_not_raise_on_init(self):
+        GpioPlaySession(Path("x.sqlite"), "/dev/null", initial_mv=5)
+
+    def test_increase_calls_show_value(self, hw_session, display):
+        hw_session.current_mv = 3
+        display.reset_mock()
+        hw_session.increase_mana_value()
+        display.show_value.assert_called_once_with(4)
+
+    def test_increase_at_max_does_not_call_show_value(self, hw_session, display):
+        hw_session.current_mv = hw_session.max_mana_value
+        display.reset_mock()
+        hw_session.increase_mana_value()
+        display.show_value.assert_not_called()
+
+    def test_decrease_calls_show_value(self, hw_session, display):
+        hw_session.current_mv = 3
+        display.reset_mock()
+        hw_session.decrease_mana_value()
+        display.show_value.assert_called_once_with(2)
+
+    def test_decrease_at_min_does_not_call_show_value(self, hw_session, display):
+        hw_session.current_mv = hw_session.min_mana_value
+        display.reset_mock()
+        hw_session.decrease_mana_value()
+        display.show_value.assert_not_called()
+
+    def test_reset_calls_show_value(self, hw_session, display):
+        hw_session.current_mv = 7
+        display.reset_mock()
+        hw_session.reset_mana_value()
+        display.show_value.assert_called_once_with(hw_session.min_mana_value)
+
+    def test_summon_success_show_busy_then_show_value(self, hw_session, display):
+        with (
+            patch("kamir.play.gpio_session.select_creature", return_value=_card()),
+            patch("kamir.play.gpio_session.load_art", return_value=None),
+            patch("kamir.play.gpio_session.print_card"),
+        ):
+            display.reset_mock()
+            hw_session.summon()
+        assert display.method_calls == [
+            call.show_busy(hw_session.current_mv),
+            call.show_value(hw_session.current_mv),
+        ]
+
+    def test_summon_no_card_calls_show_error_and_blink(self, hw_session, display, error_led):
+        with patch("kamir.play.gpio_session.select_creature", return_value=None):
+            display.reset_mock()
+            error_led.reset_mock()
+            hw_session.summon()
+        display.show_error.assert_called_once()
+        error_led.blink.assert_called_once()
+
+    def test_summon_no_card_does_not_call_show_value(self, hw_session, display):
+        with patch("kamir.play.gpio_session.select_creature", return_value=None):
+            display.reset_mock()
+            hw_session.summon()
+        display.show_value.assert_not_called()
+
+    def test_summon_print_error_calls_show_error_and_blink(self, hw_session, display, error_led):
+        with (
+            patch("kamir.play.gpio_session.select_creature", return_value=_card()),
+            patch("kamir.play.gpio_session.load_art", return_value=None),
+            patch("kamir.play.gpio_session.print_card", side_effect=OSError("no device")),
+        ):
+            display.reset_mock()
+            error_led.reset_mock()
+            hw_session.summon()
+        display.show_error.assert_called_once()
+        error_led.blink.assert_called_once()
+
+    def test_reprint_success_show_busy_then_show_value(self, hw_session, display):
+        hw_session.last_card = _card()
+        with (
+            patch("kamir.play.gpio_session.load_art", return_value=None),
+            patch("kamir.play.gpio_session.print_card"),
+        ):
+            display.reset_mock()
+            hw_session.reprint_last()
+        assert display.method_calls == [
+            call.show_busy(hw_session.current_mv),
+            call.show_value(hw_session.current_mv),
+        ]
+
+    def test_reprint_print_error_calls_show_error_and_blink(self, hw_session, display, error_led):
+        hw_session.last_card = _card()
+        with (
+            patch("kamir.play.gpio_session.load_art", return_value=None),
+            patch("kamir.play.gpio_session.print_card", side_effect=OSError("gone")),
+        ):
+            display.reset_mock()
+            error_led.reset_mock()
+            hw_session.reprint_last()
+        display.show_error.assert_called_once()
+        error_led.blink.assert_called_once()
+
+    def test_reprint_no_last_card_no_display_call(self, hw_session, display):
+        hw_session.last_card = None
+        display.reset_mock()
+        hw_session.reprint_last()
+        display.show_busy.assert_not_called()
+
+    def test_shutdown_calls_show_off(self, hw_session, display):
+        hw_session.shutdown()
+        display.show_off.assert_called_once()
+
+    def test_no_display_no_raise_on_all_operations(self):
+        s = GpioPlaySession(Path("x.sqlite"), "/dev/null")
+        with (
+            patch("kamir.play.gpio_session.select_creature", return_value=_card()),
+            patch("kamir.play.gpio_session.load_art", return_value=None),
+            patch("kamir.play.gpio_session.print_card"),
+        ):
+            s.increase_mana_value()
+            s.decrease_mana_value()
+            s.reset_mana_value()
+            s.summon()
+            s.reprint_last()
+            s.shutdown()
