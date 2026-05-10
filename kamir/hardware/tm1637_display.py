@@ -42,7 +42,7 @@ def _format_segments(
 class Tm1637Display:
     """ManaDisplay backed by a TM1637 4-digit 7-segment LED module.
 
-    Requires the ``tm1637`` package (``uv add tm1637``).
+    Requires the ``raspberrypi-tm1637`` PyPI package (``import tm1637``).
     Segment layout assumes a standard 4-digit common-cathode TM1637 module.
     """
 
@@ -57,8 +57,8 @@ class Tm1637Display:
     ) -> None:
         if not _AVAILABLE:
             raise ImportError(
-                "tm1637 package not installed. "
-                "Run: uv add tm1637"
+                "raspberrypi-tm1637 package not installed. "
+                "Run: uv add raspberrypi-tm1637 gpiozero"
             )
         self._tm = _tm1637_lib.TM1637(clk=clk, dio=dio, brightness=brightness)
         self._digits = digits
