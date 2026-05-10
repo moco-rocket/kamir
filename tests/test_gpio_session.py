@@ -211,6 +211,24 @@ class TestShutdown:
         t.join(timeout=1.0)
         assert unblocked.is_set()
 
+    def test_os_shutdown_false_does_not_call_subprocess(self):
+        with patch("kamir.play.gpio_session.subprocess.run") as mock_run:
+            s = GpioPlaySession(Path("x.sqlite"), "/dev/null", os_shutdown=False)
+            s.shutdown()
+            mock_run.assert_not_called()
+
+    def test_os_shutdown_true_calls_systemctl_poweroff(self):
+        with patch("kamir.play.gpio_session.subprocess.run") as mock_run:
+            s = GpioPlaySession(Path("x.sqlite"), "/dev/null", os_shutdown=True)
+            s.shutdown()
+            mock_run.assert_called_once_with(["systemctl", "poweroff"], check=False)
+
+    def test_os_shutdown_default_is_false(self):
+        with patch("kamir.play.gpio_session.subprocess.run") as mock_run:
+            s = GpioPlaySession(Path("x.sqlite"), "/dev/null")
+            s.shutdown()
+            mock_run.assert_not_called()
+
 
 @pytest.fixture
 def display() -> MagicMock:

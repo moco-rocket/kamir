@@ -186,6 +186,7 @@ def stage_gpio_play(cfg: dict) -> None:
         max_mv=play_cfg.get("max_mana_value", 16),
         display=display,
         error_led=error_led,
+        os_shutdown=play_cfg.get("os_shutdown", False),
     )
 
     bounce_time = play_cfg.get("bounce_time", 0.05)

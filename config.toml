@@ -45,6 +45,7 @@ allowed = [
 # max_mana_value     = 16
 # bounce_time        = 0.05   # seconds; debounce window for all buttons
 # hold_time          = 1.0    # seconds; threshold to trigger long-press actions
+# os_shutdown        = true   # long-press POWER also runs: systemctl poweroff
 #
 # [gpio.buttons]   # BCM pin numbers
 # power   = 5
