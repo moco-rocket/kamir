@@ -89,7 +89,7 @@ min_mana_value     = 0
 max_mana_value     = 16
 bounce_time        = 0.05
 hold_time          = 1.0
-os_shutdown        = true   # long-press POWER runs: sudo systemctl poweroff
+os_shutdown        = true   # long-press POWER runs: systemctl poweroff
 
 [gpio.buttons]   # BCM pin numbers
 power   = 5
