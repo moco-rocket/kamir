@@ -17,59 +17,41 @@ MJ-5890Kサーマルプリンターにカード情報を印刷します。印刷
 
 ## セットアップ
 
+### Raspberry Pi（本番）
+
 ```bash
 # uv をインストール（未インストールの場合）
 curl -LsSf https://astral.sh/uv/install.sh | sh
 
-# リポジトリをクローン
-git clone https://github.com/moco-rocket/kamir.git
-cd kamir
-
-# 依存パッケージをインストール（kamir コマンドも .venv/bin/ に生成される）
-uv sync
+# kamir をインストール
+uv tool install git+https://github.com/moco-rocket/kamir.git
 
 # AllPrintings.sqlite を mtgjson.com からダウンロードして配置
 # https://mtgjson.com/downloads/all-files/#allprintings
-mkdir -p data/db
-mv AllPrintings.sqlite data/db/
+mkdir -p ~/kamir-data/data/db
+mv AllPrintings.sqlite ~/kamir-data/data/db/
 
 # config.toml を作成（下記「設定」セクション参照）
+# cd ~/kamir-data && cp /path/to/config.toml .
 
 # カードプールDBを構築（初回のみ）
+cd ~/kamir-data && kamir build-db
+```
+
+`config.toml` の探索順序については下記「設定」セクションを参照してください。
+`uv tool upgrade kamir` で最新バージョンに更新できます。
+
+### 開発環境（macOS / Linux）
+
+```bash
+git clone https://github.com/moco-rocket/kamir.git
+cd kamir
+uv sync
+source .venv/bin/activate
 kamir build-db
 ```
 
-`uv sync` を実行すると `.venv/bin/kamir` にエントリーポイントが生成されます。
-仮想環境をアクティベートすることで、以降 `kamir` を直接呼び出せます。
-
-```bash
-source .venv/bin/activate
-```
-
-Raspberry Pi で常用する場合は `~/.bashrc` に以下を追記するか、
-`uv tool install` でシステム全体にインストールすることもできます。
-
-```bash
-# ~/.bashrc に追記する場合（KAMIR_DIR はリポジトリのパスに合わせて変更）
-export PATH="$HOME/kamir/.venv/bin:$PATH"
-```
-
-`uv tool install` でインストールした場合は、`config.toml` の場所を明示する必要があります
-（インストール先ディレクトリとは無関係になるため）。
-
-```bash
-uv tool install git+https://github.com/moco-rocket/kamir.git
-
-# 方法 A: 環境変数で固定（systemd や .bashrc に設定）
-export KAMIR_CONFIG=/home/pi/kamir-data/config.toml
-kamir play
-
-# 方法 B: 実行のたびに指定
-kamir --config /home/pi/kamir-data/config.toml play
-
-# 方法 C: config.toml のあるディレクトリに cd してから実行
-cd /home/pi/kamir-data && kamir play
-```
+または venv をアクティベートせずに `uv run kamir build-db` でも実行できます。
 
 ## Raspberry Pi ハードウェア準備
 
@@ -132,13 +114,14 @@ kamir --debug build-db
 ## GPIO ボタン操作モード（Raspberry Pi）
 
 4つのボタン・TM1637 7セグメント・エラーLEDを使った物理操作モードです。
-`uv sync` で `gpiozero` / `raspberrypi-tm1637` / `lgpio` が自動インストールされます。
+`uv tool install` で `gpiozero` / `raspberrypi-tm1637` / `lgpio` が自動インストールされます。
 
 ```bash
 kamir --config config.toml gpio-play
 ```
 
-POWERボタン長押し（1秒以上）でプロセスを終了します。
+- POWERボタン長押し（1秒以上）でプロセスを停止します
+- `config.toml` で `os_shutdown = true` を設定すると、OS シャットダウン（`systemctl poweroff`）まで行います
 
 配線・単体テスト・systemd設定の詳細は [docs/gpio-play.md](docs/gpio-play.md) を参照してください。
 
@@ -153,11 +136,11 @@ POWERボタン長押し（1秒以上）でプロセスを終了します。
 
 ## テスト
 
+開発用チェックアウトから実行します（`uv tool install` 環境では不要）。
+
 ```bash
 uv run pytest
 ```
-
-> テストは `uv tool install` ではなく開発用チェックアウトから実行するため `uv run pytest` が正しいです。
 
 ## 設定
 
@@ -167,8 +150,8 @@ uv run pytest
 2. 環境変数 `KAMIR_CONFIG` が設定されている場合
 3. カレントディレクトリの `config.toml`
 
-`uv sync` を使った開発環境ではリポジトリルートから実行するため 3 が自然に機能します。
-`uv tool install` でインストールした場合は 1 か 2 を利用してください。
+Raspberry Pi での運用では、`config.toml` のあるディレクトリに `cd` してから実行するか（方法3）、
+`--config` で絶対パスを指定してください（方法1）。
 
 `config.toml` の内容:
 
@@ -199,7 +182,8 @@ kamir/
 ├── config.py       # 設定読み込み
 ├── db/             # MTGJSONロードおよびDB書き込み
 ├── filter/         # カードフィルタリング（純粋関数）+ to_card()
-├── play/           # ゲームセッション
+├── hardware/       # ManaDisplay / ErrorLed プロトコルと実装（TM1637、GPIO LED）
+├── play/           # ゲームセッション（ターミナル・GPIO）
 └── printer/        # ESC/POS描画 + MJ-5890K送信
 ```
 
