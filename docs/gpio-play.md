@@ -59,7 +59,19 @@ markers, so they install only on the Pi:
 uv sync
 ```
 
-This installs `gpiozero` and `raspberrypi-tm1637` automatically on Raspberry Pi OS.
+This installs `gpiozero`, `raspberrypi-tm1637`, and `lgpio` automatically on Raspberry Pi OS.
+
+### sudoers setup (required for `os_shutdown = true`)
+
+`systemctl poweroff` requires elevated privileges when called from a systemd service
+(polkit only grants it to interactive login sessions). Add a `NOPASSWD` rule:
+
+```bash
+echo 'pi ALL=(ALL) NOPASSWD: /usr/bin/systemctl poweroff' | sudo tee /etc/sudoers.d/kamir-poweroff
+sudo chmod 440 /etc/sudoers.d/kamir-poweroff
+```
+
+Skip this step if you leave `os_shutdown = false` (the default).
 
 ---
 
@@ -74,6 +86,7 @@ min_mana_value     = 0
 max_mana_value     = 16
 bounce_time        = 0.05
 hold_time          = 1.0
+os_shutdown        = true   # long-press POWER runs: sudo systemctl poweroff
 
 [gpio.buttons]   # BCM pin numbers
 power   = 5
