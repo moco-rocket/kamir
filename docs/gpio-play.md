@@ -177,13 +177,40 @@ error LED blinks three times.
 
 ## systemd Autostart
 
-A service unit is provided at `deploy/kamir-gpio-play.service`.
 **Enable systemd only after manual testing is confirmed working.**
 
+A template is provided at `deploy/kamir-gpio-play.service.example`.
+Two placeholders must be replaced before installing:
+
+| Placeholder | What to put |
+|---|---|
+| `CHANGE_THIS_REPO_DIR` | Absolute path to the cloned repository, e.g. `/home/pi/dev/kamir` |
+| `CHANGE_THIS_KAMIR_BIN` | Path to the `kamir` binary — see below |
+
+**`KAMIR_BIN` by install method:**
+
+```
+uv tool install  →  /home/pi/.local/bin/kamir        (or: which kamir)
+dev checkout     →  /home/pi/dev/kamir/.venv/bin/kamir
+```
+
+**Install steps:**
+
 ```bash
-sudo cp deploy/kamir-gpio-play.service /etc/systemd/system/
+# 1. Copy the template
+cp deploy/kamir-gpio-play.service.example /tmp/kamir-gpio-play.service
+
+# 2. Edit the two placeholders
+#    CHANGE_THIS_REPO_DIR  → e.g. /home/pi/dev/kamir
+#    CHANGE_THIS_KAMIR_BIN → e.g. /home/pi/.local/bin/kamir  (uv tool install)
+nano /tmp/kamir-gpio-play.service
+
+# 3. Install and enable
+sudo cp /tmp/kamir-gpio-play.service /etc/systemd/system/
 sudo systemctl daemon-reload
 sudo systemctl enable --now kamir-gpio-play
+
+# 4. Confirm it started
 sudo journalctl -u kamir-gpio-play -f
 ```
 

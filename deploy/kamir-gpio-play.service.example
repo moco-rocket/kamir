@@ -1,0 +1,27 @@
+# Copy this file to /etc/systemd/system/kamir-gpio-play.service and
+# replace the two CHANGE_THIS placeholders before enabling.
+# See docs/gpio-play.md for step-by-step instructions.
+#
+# REPO_DIR  — absolute path to the cloned repository
+#             e.g. /home/pi/dev/kamir
+#
+# KAMIR_BIN — absolute path to the kamir executable
+#             uv tool install → /home/pi/.local/bin/kamir
+#             dev checkout    → /home/pi/dev/kamir/.venv/bin/kamir
+
+[Unit]
+Description=Kamir GPIO Play Session
+After=network.target
+
+[Service]
+Type=simple
+User=pi
+WorkingDirectory=CHANGE_THIS_REPO_DIR
+ExecStart=CHANGE_THIS_KAMIR_BIN gpio-play
+Restart=on-failure
+RestartSec=5s
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target
