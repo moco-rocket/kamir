@@ -5,6 +5,7 @@ description = "Interactive Momir Basic play tool for Raspberry Pi + thermal prin
 requires-python = ">=3.11"
 dependencies = [
     "gpiozero>=2.0.1 ; sys_platform == 'linux'",
+    "lgpio>=0.2.2.0 ; sys_platform == 'linux'",
     "pillow>=10.0",
     "raspberrypi-tm1637>=1.3.8 ; sys_platform == 'linux'",
     "tqdm>=4.67.3",
