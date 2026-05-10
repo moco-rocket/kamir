@@ -221,7 +221,7 @@ class TestShutdown:
         with patch("kamir.play.gpio_session.subprocess.run") as mock_run:
             s = GpioPlaySession(Path("x.sqlite"), "/dev/null", os_shutdown=True)
             s.shutdown()
-            mock_run.assert_called_once_with(["sudo", "systemctl", "poweroff"], check=False)
+            mock_run.assert_called_once_with(["systemctl", "poweroff"], check=False)
 
     def test_os_shutdown_default_is_false(self):
         with patch("kamir.play.gpio_session.subprocess.run") as mock_run:

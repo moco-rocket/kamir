@@ -116,6 +116,6 @@ class GpioPlaySession:
         self._shutdown_event.set()
         if self._os_shutdown:
             log.info("shutdown() — initiating OS poweroff")
-            subprocess.run(["sudo", "systemctl", "poweroff"], check=False)
+            subprocess.run(["systemctl", "poweroff"], check=False)
         else:
             log.info("shutdown() — gpio-play process stopped. To power off: sudo shutdown -h now")

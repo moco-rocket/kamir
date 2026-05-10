@@ -61,15 +61,18 @@ uv sync
 
 This installs `gpiozero`, `raspberrypi-tm1637`, and `lgpio` automatically on Raspberry Pi OS.
 
-### sudoers setup (required for `os_shutdown = true`)
+### polkit setup (required for `os_shutdown = true`)
 
-`systemctl poweroff` requires elevated privileges when called from a systemd service
-(polkit only grants it to interactive login sessions). Add a `NOPASSWD` rule:
+By default, polkit only allows `systemctl poweroff` from interactive login sessions.
+A polkit rule grants the same permission to the kamir service process.
+A ready-made rule file is provided in `deploy/`:
 
 ```bash
-echo 'pi ALL=(ALL) NOPASSWD: /usr/bin/systemctl poweroff' | sudo tee /etc/sudoers.d/kamir-poweroff
-sudo chmod 440 /etc/sudoers.d/kamir-poweroff
+sudo cp deploy/10-kamir-poweroff.pkla \
+    /etc/polkit-1/localauthority/50-local.d/
 ```
+
+No reboot or service restart needed — polkit picks up the file immediately.
 
 Skip this step if you leave `os_shutdown = false` (the default).
 
