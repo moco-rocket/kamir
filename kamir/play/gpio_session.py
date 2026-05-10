@@ -1,4 +1,5 @@
 import logging
+import subprocess
 import threading
 from pathlib import Path
 
@@ -22,6 +23,7 @@ class GpioPlaySession:
         max_mv: int = 16,
         display: ManaDisplay | None = None,
         error_led: ErrorLed | None = None,
+        os_shutdown: bool = False,
     ) -> None:
         self.db_path = db_path
         self.device = device
@@ -33,6 +35,7 @@ class GpioPlaySession:
         self._shutdown_event = threading.Event()
         self._display = display
         self._error_led = error_led
+        self._os_shutdown = os_shutdown
         self._signal_value()
 
     def _signal_value(self) -> None:
@@ -108,10 +111,11 @@ class GpioPlaySession:
         self._shutdown_event.wait()
 
     def shutdown(self) -> None:
-        log.info(
-            "shutdown() called — stopping gpio-play process. "
-            "To power off the Pi run: sudo shutdown -h now"
-        )
         if self._display is not None:
             self._display.show_off()
         self._shutdown_event.set()
+        if self._os_shutdown:
+            log.info("shutdown() — initiating OS poweroff")
+            subprocess.run(["systemctl", "poweroff"], check=False)
+        else:
+            log.info("shutdown() — gpio-play process stopped. To power off: sudo shutdown -h now")
