@@ -36,7 +36,7 @@ mv AllPrintings.sqlite data/db/
 # config.toml を作成（下記「設定」セクション参照）
 
 # カードプールDBを構築（初回のみ）
-uv run kamir build-db
+kamir build-db
 ```
 
 `uv sync` を実行すると `.venv/bin/kamir` にエントリーポイントが生成されます。
@@ -97,7 +97,7 @@ sudo usermod -aG lp $USER
 **4. 動作確認**
 
 ```bash
-uv run kamir print-test --mv 4
+kamir print-test --mv 4
 ```
 
 詳細は [docs/printing.md](docs/printing.md) を参照してください。
@@ -106,30 +106,27 @@ uv run kamir print-test --mv 4
 
 ## 使い方
 
-> **Note**: `kamir` コマンドは仮想環境内にインストールされます。
-> `source .venv/bin/activate` で有効化するか、常に `uv run kamir` 経由で実行してください。
-
 ```bash
 # カードプールDBを構築（AllPrintings.sqlite から）
-uv run kamir build-db
+kamir build-db
 
 # DBを完全に作り直す（スキーマ変更後やリセット時）
-uv run kamir build-db --force
+kamir build-db --force
 
 # アートのダウンロード状況を確認する
-uv run kamir art-status
+kamir art-status
 
 # ターミナル対話セッション
-uv run kamir play
+kamir play
 
 # GPIOボタン操作セッション（Raspberry Pi）
-uv run kamir --config config.toml gpio-play
+kamir --config config.toml gpio-play
 
 # ハードウェアテスト（マナ総量4のクリーチャーを1枚印刷）
-uv run kamir print-test --mv 4
+kamir print-test --mv 4
 
 # デバッグログを有効にする
-uv run kamir --debug build-db
+kamir --debug build-db
 ```
 
 ## GPIO ボタン操作モード（Raspberry Pi）
@@ -138,7 +135,7 @@ uv run kamir --debug build-db
 `uv sync` で `gpiozero` / `raspberrypi-tm1637` / `lgpio` が自動インストールされます。
 
 ```bash
-uv run kamir --config config.toml gpio-play
+kamir --config config.toml gpio-play
 ```
 
 POWERボタン長押し（1秒以上）でプロセスを終了します。
@@ -159,6 +156,8 @@ POWERボタン長押し（1秒以上）でプロセスを終了します。
 ```bash
 uv run pytest
 ```
+
+> テストは `uv tool install` ではなく開発用チェックアウトから実行するため `uv run pytest` が正しいです。
 
 ## 設定
 
