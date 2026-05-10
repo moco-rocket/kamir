@@ -1,0 +1,16 @@
+# polkit local authority rule — allows the kamir service (running as User=pi)
+# to trigger OS poweroff via systemctl without sudo.
+#
+# Install:
+#   sudo cp deploy/10-kamir-poweroff.pkla \
+#       /etc/polkit-1/localauthority/50-local.d/
+#
+# Required only when os_shutdown = true in [gpio.play].
+# Tested on Raspberry Pi OS Bookworm (polkit 122).
+
+[Allow kamir service to poweroff]
+Identity=unix-user:pi
+Action=org.freedesktop.login1.power-off
+ResultAny=yes
+ResultInactive=yes
+ResultActive=yes

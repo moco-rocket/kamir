@@ -59,7 +59,22 @@ markers, so they install only on the Pi:
 uv sync
 ```
 
-This installs `gpiozero` and `raspberrypi-tm1637` automatically on Raspberry Pi OS.
+This installs `gpiozero`, `raspberrypi-tm1637`, and `lgpio` automatically on Raspberry Pi OS.
+
+### polkit setup (required for `os_shutdown = true`)
+
+By default, polkit only allows `systemctl poweroff` from interactive login sessions.
+A polkit rule grants the same permission to the kamir service process.
+A ready-made rule file is provided in `deploy/`:
+
+```bash
+sudo cp deploy/10-kamir-poweroff.pkla \
+    /etc/polkit-1/localauthority/50-local.d/
+```
+
+No reboot or service restart needed — polkit picks up the file immediately.
+
+Skip this step if you leave `os_shutdown = false` (the default).
 
 ---
 
@@ -74,6 +89,7 @@ min_mana_value     = 0
 max_mana_value     = 16
 bounce_time        = 0.05
 hold_time          = 1.0
+os_shutdown        = true   # long-press POWER runs: systemctl poweroff
 
 [gpio.buttons]   # BCM pin numbers
 power   = 5
