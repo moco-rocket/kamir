@@ -24,7 +24,7 @@ outputs a card receipt automatically.
 
 | Button | BCM pin | Action (short press) | Action (long press ≥ 1 s) |
 |---|---|---|---|
-| POWER | 5 | — | Stop `gpio-play` process |
+| POWER | 5 | — | Stop process (+ OS poweroff if `os_shutdown = true`) |
 | MV DOWN | 13 | Decrease mana value | Reset mana value to 0 |
 | MV UP | 19 | Increase mana value | — |
 | SUMMON | 26 | Summon & print card | Reprint last card |
@@ -52,14 +52,16 @@ Wire an LED (with 220 Ω series resistor) between BCM 21 (physical 40) and GND.
 
 ## Software Setup
 
-Dependencies are declared in `pyproject.toml` with `sys_platform == 'linux'`
-markers, so they install only on the Pi:
+Install kamir with `uv tool install` — GPIO dependencies are declared with
+`sys_platform == 'linux'` markers and install automatically on the Pi:
 
 ```bash
-uv sync
+uv tool install git+https://github.com/moco-rocket/kamir.git
+# or upgrade an existing install:
+uv tool upgrade kamir
 ```
 
-This installs `gpiozero`, `raspberrypi-tm1637`, and `lgpio` automatically on Raspberry Pi OS.
+This installs `gpiozero`, `raspberrypi-tm1637`, and `lgpio` alongside kamir.
 
 ### polkit setup (required for `os_shutdown = true`)
 
@@ -114,10 +116,16 @@ pin = 21
 ## Standalone Tests (Before Running `gpio-play`)
 
 Run these checks individually before starting the full session.
+The scripts below use kamir's own modules; run them via the cloned repo:
+
+```bash
+cd ~/dev/kamir   # or wherever you cloned the repo
+uv run python3
+```
 
 ### Button test
 
-Press each button and verify the GPIO reads correctly:
+Press each button and verify GPIO reads correctly:
 
 ```python
 from gpiozero import Button
@@ -133,33 +141,22 @@ for pin, name in [(5, "POWER"), (13, "MV_DOWN"), (19, "MV_UP"), (26, "SUMMON")]:
 
 ### 7-segment display test
 
-Verify the Grove 4-Digit Display counts from 0 to 9:
-
-```python
-import tm1637, time
-
-tm = tm1637.TM1637(clk=23, dio=24, brightness=2)
-
-# Show "  00" through "  09"
-for i in range(10):
-    segs = [0x00, 0x00] + [tm1637.TM1637.digit_to_segment[i // 10],
-                            tm1637.TM1637.digit_to_segment[i % 10]]
-    tm.write(segs)
-    time.sleep(0.5)
-
-tm.write([0x00] * 4)  # blank
-print("Display test complete")
-```
-
-Or use the built-in `_format_segments` helper from kamir:
+Verify the Grove 4-Digit Display shows values 0–16 then error/off:
 
 ```python
 from kamir.hardware.tm1637_display import Tm1637Display
+import time
+
 d = Tm1637Display(clk=23, dio=24, brightness=2)
 for mv in range(17):
     d.show_value(mv)
-    time.sleep(0.3)
+    time.sleep(0.2)
+d.show_busy(0)   # "----"
+time.sleep(0.5)
+d.show_error()   # "Err "
+time.sleep(0.5)
 d.show_off()
+print("Display test complete")
 ```
 
 ### Error LED test
@@ -184,7 +181,8 @@ print("LED test complete")
 kamir --config config.toml gpio-play
 ```
 
-Long-press POWER (≥ 1 s) to stop the process cleanly.
+Long-press POWER (≥ 1 s) to stop the process cleanly
+(and power off the OS if `os_shutdown = true` in `[gpio.play]`).
 The display shows `----` while printing and returns to the mana value on completion.
 On error (no card at that MV, or printer fault) the display shows `Err` and the
 error LED blinks three times.
