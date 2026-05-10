@@ -98,10 +98,11 @@ pin = 21
 ## Standalone Tests (Before Running `gpio-play`)
 
 Run these checks individually before starting the full session.
-Use `python3` in the project virtual environment:
+Use `uv run python3` to ensure the venv packages (gpiozero, raspberrypi-tm1637, lgpio) are available:
 
 ```bash
-source .venv/bin/activate   # or: uv run python3
+cd ~/dev/kamir
+uv run python3
 ```
 
 ### Button test
@@ -169,8 +170,11 @@ print("LED test complete")
 
 ## Running `gpio-play`
 
+`kamir` コマンドは venv 内にインストールされているため、必ず `uv run` 経由で実行してください。
+`source .venv/bin/activate` で有効化した場合は `kamir` 単体でも動きますが、`uv run` が確実です。
+
 ```bash
-uv run kamir gpio-play
+uv run kamir --config config.toml gpio-play
 ```
 
 Long-press POWER (≥ 1 s) to stop the process cleanly.
