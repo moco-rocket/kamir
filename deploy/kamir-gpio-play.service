@@ -5,8 +5,10 @@ After=network.target
 [Service]
 Type=simple
 User=pi
-WorkingDirectory=/home/pi/dev/kamir
-ExecStart=/home/pi/.local/bin/kamir gpio-play
+# %h expands to the home directory of User= above (/home/pi).
+# Adjust the repo path (dev/kamir) if you cloned elsewhere.
+WorkingDirectory=%h/dev/kamir
+ExecStart=%h/.local/bin/kamir gpio-play
 Restart=on-failure
 RestartSec=5s
 StandardOutput=journal
