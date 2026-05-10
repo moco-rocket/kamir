@@ -5,8 +5,8 @@ After=network.target
 [Service]
 Type=simple
 User=pi
-WorkingDirectory=/home/pi/kamir
-ExecStart=/home/pi/kamir/.venv/bin/kamir gpio-play
+WorkingDirectory=/home/pi/dev/kamir
+ExecStart=/home/pi/.local/bin/kamir gpio-play
 Restart=on-failure
 RestartSec=5s
 StandardOutput=journal
