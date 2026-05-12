@@ -1,5 +1,5 @@
 from kamir.domain import Card
-from kamir.printer.render import Cut, RasterImage, Rule, TextLine, _PRINTER_WIDTH, render_card
+from kamir.printer.render import Cut, RasterImage, Rule, TextLine, _PRINTER_WIDTH, render_card, render_token
 
 
 def _card(**overrides) -> Card:
@@ -105,3 +105,66 @@ class TestRenderCard:
         art_idx = next(i for i, x in enumerate(instrs) if isinstance(x, RasterImage))
         # Must be preceded by the thick header rule (index 2 in normal layout)
         assert isinstance(instrs[art_idx - 1], Rule) and instrs[art_idx - 1].thick
+
+
+class TestRenderToken:
+    def test_ends_with_cut(self):
+        assert isinstance(render_token(_card())[-1], Cut)
+
+    def test_pt_is_bold(self):
+        bold = [i for i in render_token(_card()) if isinstance(i, TextLine) and i.bold]
+        assert any("2/2" in line.text for line in bold)
+
+    def test_type_line_present(self):
+        text = " ".join(i.text for i in render_token(_card()) if isinstance(i, TextLine))
+        assert "Creature - Bear" in text
+
+    def test_name_present_uppercase(self):
+        text = " ".join(i.text for i in render_token(_card()) if isinstance(i, TextLine))
+        assert "GRIZZLY BEARS" in text
+
+    def test_expansion_present(self):
+        text = " ".join(i.text for i in render_token(_card()) if isinstance(i, TextLine))
+        assert "2ED" in text
+
+    def test_mana_cost_not_present(self):
+        text = " ".join(i.text for i in render_token(_card()) if isinstance(i, TextLine))
+        assert "{1}{G}" not in text
+
+    def test_pt_before_type_line(self):
+        instrs = render_token(_card())
+        text_lines = [i for i in instrs if isinstance(i, TextLine) and i.text.strip()]
+        pt_idx = next(i for i, t in enumerate(text_lines) if "2/2" in t.text)
+        type_idx = next(i for i, t in enumerate(text_lines) if "Creature" in t.text)
+        assert pt_idx < type_idx
+
+    def test_no_art_by_default(self):
+        assert not any(isinstance(i, RasterImage) for i in render_token(_card()))
+
+    def test_art_inserted_after_pt_rule(self):
+        art = RasterImage(data=bytes(48 * 192), width_bytes=48, height=192)
+        instrs = render_token(_card(), art)
+        art_idx = next(i for i, x in enumerate(instrs) if isinstance(x, RasterImage))
+        assert isinstance(instrs[art_idx - 1], Rule) and instrs[art_idx - 1].thick
+
+    def test_no_pt_shows_placeholder(self):
+        text = " ".join(i.text for i in render_token(_card(power="", toughness="")) if isinstance(i, TextLine))
+        assert "?/?" in text
+
+    def test_empty_oracle_shows_placeholder(self):
+        text = " ".join(i.text for i in render_token(_card(oracle_text="")) if isinstance(i, TextLine))
+        assert "(no text)" in text
+
+    def test_has_at_least_three_rules(self):
+        assert len([i for i in render_token(_card()) if isinstance(i, Rule)]) >= 3
+
+    def test_trailing_blank_lines_before_cut(self):
+        instrs = render_token(_card())
+        cut_idx = next(i for i, x in enumerate(instrs) if isinstance(x, Cut))
+        trailing_blanks = 0
+        for i in range(cut_idx - 1, -1, -1):
+            if isinstance(instrs[i], TextLine) and instrs[i].text == "":
+                trailing_blanks += 1
+            else:
+                break
+        assert trailing_blanks >= 3

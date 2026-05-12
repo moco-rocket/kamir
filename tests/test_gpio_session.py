@@ -82,7 +82,7 @@ class TestSummon:
         with (
             patch("kamir.play.gpio_session.select_creature", return_value=card) as mock_sel,
             patch("kamir.play.gpio_session.load_art", return_value=None) as mock_art,
-            patch("kamir.play.gpio_session.print_card") as mock_print,
+            patch("kamir.play.gpio_session.print_token") as mock_print,
         ):
             session.summon()
             mock_sel.assert_called_once_with(session.db_path, session.current_mv)
@@ -94,7 +94,7 @@ class TestSummon:
         with (
             patch("kamir.play.gpio_session.select_creature", return_value=card),
             patch("kamir.play.gpio_session.load_art", return_value=None),
-            patch("kamir.play.gpio_session.print_card"),
+            patch("kamir.play.gpio_session.print_token"),
         ):
             session.summon()
             assert session.last_card is card
@@ -102,7 +102,7 @@ class TestSummon:
     def test_print_card_not_called_when_no_card(self, session):
         with (
             patch("kamir.play.gpio_session.select_creature", return_value=None),
-            patch("kamir.play.gpio_session.print_card") as mock_print,
+            patch("kamir.play.gpio_session.print_token") as mock_print,
         ):
             session.summon()
             mock_print.assert_not_called()
@@ -111,7 +111,7 @@ class TestSummon:
         session.last_card = None
         with (
             patch("kamir.play.gpio_session.select_creature", return_value=None),
-            patch("kamir.play.gpio_session.print_card"),
+            patch("kamir.play.gpio_session.print_token"),
         ):
             session.summon()
             assert session.last_card is None
@@ -127,7 +127,7 @@ class TestSummon:
         with (
             patch("kamir.play.gpio_session.select_creature", return_value=card),
             patch("kamir.play.gpio_session.load_art", return_value=None),
-            patch("kamir.play.gpio_session.print_card", side_effect=OSError("no device")),
+            patch("kamir.play.gpio_session.print_token", side_effect=OSError("no device")),
         ):
             session.summon()  # should not raise
 
@@ -135,7 +135,7 @@ class TestSummon:
         with (
             patch("kamir.play.gpio_session.select_creature", return_value=_card()),
             patch("kamir.play.gpio_session.load_art", return_value=None),
-            patch("kamir.play.gpio_session.print_card"),
+            patch("kamir.play.gpio_session.print_token"),
         ):
             session.summon()
             assert not session._print_lock.locked()
@@ -144,7 +144,7 @@ class TestSummon:
         with (
             patch("kamir.play.gpio_session.select_creature", return_value=_card()),
             patch("kamir.play.gpio_session.load_art", return_value=None),
-            patch("kamir.play.gpio_session.print_card", side_effect=OSError("no device")),
+            patch("kamir.play.gpio_session.print_token", side_effect=OSError("no device")),
         ):
             session.summon()
             assert not session._print_lock.locked()
@@ -156,7 +156,7 @@ class TestReprintLast:
         session.last_card = card
         with (
             patch("kamir.play.gpio_session.load_art", return_value=None) as mock_art,
-            patch("kamir.play.gpio_session.print_card") as mock_print,
+            patch("kamir.play.gpio_session.print_token") as mock_print,
         ):
             session.reprint_last()
             mock_art.assert_called_once_with(session.db_path, card)
@@ -164,14 +164,14 @@ class TestReprintLast:
 
     def test_no_op_when_last_card_is_none(self, session):
         session.last_card = None
-        with patch("kamir.play.gpio_session.print_card") as mock_print:
+        with patch("kamir.play.gpio_session.print_token") as mock_print:
             session.reprint_last()
             mock_print.assert_not_called()
 
     def test_ignored_while_printing(self, session):
         session._print_lock.acquire()
         session.last_card = _card()
-        with patch("kamir.play.gpio_session.print_card") as mock_print:
+        with patch("kamir.play.gpio_session.print_token") as mock_print:
             session.reprint_last()
             mock_print.assert_not_called()
 
@@ -179,7 +179,7 @@ class TestReprintLast:
         session.last_card = _card()
         with (
             patch("kamir.play.gpio_session.load_art", return_value=None),
-            patch("kamir.play.gpio_session.print_card", side_effect=OSError("gone")),
+            patch("kamir.play.gpio_session.print_token", side_effect=OSError("gone")),
         ):
             session.reprint_last()  # should not raise
 
@@ -187,7 +187,7 @@ class TestReprintLast:
         session.last_card = _card()
         with (
             patch("kamir.play.gpio_session.load_art", return_value=None),
-            patch("kamir.play.gpio_session.print_card", side_effect=OSError("gone")),
+            patch("kamir.play.gpio_session.print_token", side_effect=OSError("gone")),
         ):
             session.reprint_last()
             assert not session._print_lock.locked()
@@ -295,7 +295,7 @@ class TestDisplayIntegration:
         with (
             patch("kamir.play.gpio_session.select_creature", return_value=_card()),
             patch("kamir.play.gpio_session.load_art", return_value=None),
-            patch("kamir.play.gpio_session.print_card"),
+            patch("kamir.play.gpio_session.print_token"),
         ):
             display.reset_mock()
             hw_session.summon()
@@ -322,7 +322,7 @@ class TestDisplayIntegration:
         with (
             patch("kamir.play.gpio_session.select_creature", return_value=_card()),
             patch("kamir.play.gpio_session.load_art", return_value=None),
-            patch("kamir.play.gpio_session.print_card", side_effect=OSError("no device")),
+            patch("kamir.play.gpio_session.print_token", side_effect=OSError("no device")),
         ):
             display.reset_mock()
             error_led.reset_mock()
@@ -334,7 +334,7 @@ class TestDisplayIntegration:
         hw_session.last_card = _card()
         with (
             patch("kamir.play.gpio_session.load_art", return_value=None),
-            patch("kamir.play.gpio_session.print_card"),
+            patch("kamir.play.gpio_session.print_token"),
         ):
             display.reset_mock()
             hw_session.reprint_last()
@@ -347,7 +347,7 @@ class TestDisplayIntegration:
         hw_session.last_card = _card()
         with (
             patch("kamir.play.gpio_session.load_art", return_value=None),
-            patch("kamir.play.gpio_session.print_card", side_effect=OSError("gone")),
+            patch("kamir.play.gpio_session.print_token", side_effect=OSError("gone")),
         ):
             display.reset_mock()
             error_led.reset_mock()
@@ -370,7 +370,7 @@ class TestDisplayIntegration:
         with (
             patch("kamir.play.gpio_session.select_creature", return_value=_card()),
             patch("kamir.play.gpio_session.load_art", return_value=None),
-            patch("kamir.play.gpio_session.print_card"),
+            patch("kamir.play.gpio_session.print_token"),
         ):
             s.increase_mana_value()
             s.decrease_mana_value()

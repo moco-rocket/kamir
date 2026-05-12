@@ -8,7 +8,7 @@ from kamir.domain import Card
 from kamir.hardware.display import ManaDisplay
 from kamir.hardware.leds import ErrorLed
 from kamir.play.select import select_creature
-from kamir.printer.send import print_card
+from kamir.printer.send import print_token
 
 log = logging.getLogger(__name__)
 
@@ -79,7 +79,7 @@ class GpioPlaySession:
                 return
             try:
                 art = load_art(self.db_path, card)
-                print_card(card, self.device, art)
+                print_token(card, self.device, art)
                 self.last_card = card
                 log.info("Summoned: %s (MV %d)", card.name, card.mana_value)
                 self._signal_value()
@@ -98,7 +98,7 @@ class GpioPlaySession:
         try:
             self._signal_busy()
             art = load_art(self.db_path, self.last_card)
-            print_card(self.last_card, self.device, art)
+            print_token(self.last_card, self.device, art)
             log.info("Reprinted: %s (MV %d)", self.last_card.name, self.last_card.mana_value)
             self._signal_value()
         except OSError as e:

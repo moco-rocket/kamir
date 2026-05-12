@@ -1,6 +1,6 @@
 from kamir.domain import Card
-from kamir.printer.render import RasterImage, render_card
-from kamir.printer.send import _encode, _BOLD_ON, _CUT_FULL, _ESC_STAR, _INIT, print_card
+from kamir.printer.render import RasterImage, render_card, render_token
+from kamir.printer.send import _encode, _BOLD_ON, _CUT_FULL, _ESC_STAR, _INIT, print_card, print_token
 
 
 def _card(**overrides) -> Card:
@@ -69,4 +69,33 @@ class TestPrintCard:
         device = tmp_path / "fake_printer"
         device.touch()
         print_card(_card(), str(device), art)
+        assert _ESC_STAR in device.read_bytes()
+
+
+class TestPrintToken:
+    def test_writes_bytes_to_device_file(self, tmp_path):
+        device = tmp_path / "fake_printer"
+        device.touch()
+        print_token(_card(), str(device))
+        assert device.stat().st_size > 0
+
+    def test_output_starts_with_init_and_contains_cut(self, tmp_path):
+        device = tmp_path / "fake_printer"
+        device.touch()
+        print_token(_card(), str(device))
+        data = device.read_bytes()
+        assert data[:2] == _INIT
+        assert _CUT_FULL in data
+
+    def test_pt_encoded_in_output(self, tmp_path):
+        device = tmp_path / "fake_printer"
+        device.touch()
+        print_token(_card(), str(device))
+        assert b"2/2" in device.read_bytes()
+
+    def test_includes_raster_when_art_provided(self, tmp_path):
+        art = RasterImage(data=bytes(24 * 192), width_bytes=24, height=192)
+        device = tmp_path / "fake_printer"
+        device.touch()
+        print_token(_card(), str(device), art)
         assert _ESC_STAR in device.read_bytes()

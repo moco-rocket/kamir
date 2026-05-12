@@ -76,3 +76,46 @@ def render_card(card: Card, art: RasterImage | None = None) -> list[Instruction]
     out.append(Cut())
 
     return out
+
+
+def _pt_centered(power: str, toughness: str) -> TextLine:
+    pt = f"{power}/{toughness}" if (power and toughness) else (power or toughness or "?/?")
+    pad = (_PRINTER_WIDTH - len(pt)) // 2
+    return TextLine(" " * pad + pt, bold=True)
+
+
+def _token_footer(name: str, expansion: str) -> TextLine:
+    name_upper = name.upper()
+    exp = f"[{expansion}]"
+    gap = _PRINTER_WIDTH - len(name_upper) - len(exp)
+    if gap >= 1:
+        return TextLine(f"{name_upper}{' ' * gap}{exp}")
+    return TextLine(f"{name_upper}  {exp}")
+
+
+def render_token(card: Card, art: RasterImage | None = None) -> list[Instruction]:
+    """Convert a Card to a token-layout ESC/POS instruction list (P/T first)."""
+    out: list[Instruction] = []
+
+    out.append(TextLine(""))
+    out.append(Rule(thick=True))
+    out.append(_pt_centered(card.power, card.toughness))
+    out.append(Rule(thick=True))
+    if art is not None:
+        out.append(art)
+        out.append(Rule(thick=False))
+    out.append(TextLine(card.type_line))
+    out.append(Rule(thick=False))
+
+    oracle = wrap_oracle(card.oracle_text, width=_PRINTER_WIDTH) or "(no text)"
+    for line in oracle.split("\n"):
+        out.append(TextLine(line))
+
+    out.append(Rule(thick=False))
+    out.append(_token_footer(card.name, card.expansion))
+    out.append(Rule(thick=True))
+    for _ in range(3):
+        out.append(TextLine(""))
+    out.append(Cut())
+
+    return out

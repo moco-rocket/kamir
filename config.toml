@@ -1,22 +1,17 @@
-[paths]
-mtgjson_db = "data/db/AllPrintings.sqlite"
-kamir_db   = "data/db/kamir_cardpool.sqlite"
-log_file   = "logs/kamir.log"
+[runtime]
+default_pool = "all"
+log_file     = "logs/kamir.log"
+auto_print   = true
 
-[play]
-# If false, show a confirmation prompt before printing each card.
-auto_print = true
-
-[printer]
+[runtime.printer]
 # USB device path on Raspberry Pi (check with: ls /dev/usb/lp*)
 device = "/dev/usb/lp0"
 
-[sets]
-# Set allowed = "*" or allowed = ["*"] to include every physical-play set in
-# AllPrintings.sqlite (expansions, core sets, Commander, Masters, etc.)
-# excluding Un-sets and digital-only sets.
-# Or specify an explicit list of set codes as shown below.
-allowed = [
+[[pool]]
+name       = "all"
+path       = "data/db/kamir_all.sqlite"
+mtgjson_db = "data/db/AllPrintings.sqlite"
+sets = [
     "LEA", "2ED", "ARN", "ATQ", "3ED", "LEG", "PDRC", "DRK", "PHPR", "FEM",
     "4ED", "ICE", "HML", "ALL", "MIR", "VIS", "5ED", "POR", "WTH",
     "TMP", "STH", "EXO", "P02", "USG", "ULG", "6ED", "UDS", "S99",
@@ -39,7 +34,7 @@ allowed = [
 
 # --- Raspberry Pi GPIO (uncomment and adjust for your wiring) ---
 #
-# [gpio.play]
+# [runtime.gpio.play]
 # initial_mana_value = 0
 # min_mana_value     = 0
 # max_mana_value     = 16
@@ -47,13 +42,13 @@ allowed = [
 # hold_time          = 1.0    # seconds; threshold to trigger long-press actions
 # os_shutdown        = true   # long-press POWER also runs: systemctl poweroff
 #
-# [gpio.buttons]   # BCM pin numbers
+# [runtime.gpio.buttons]   # BCM pin numbers
 # power   = 5
 # mv_down = 13
 # mv_up   = 19
 # summon  = 26
 #
-# [gpio.display]          # TM1637 4-digit 7-segment LED
+# [runtime.gpio.display]          # TM1637 4-digit 7-segment LED
 # clk            = 23
 # dio            = 24
 # brightness     = 2      # 0–7
@@ -61,5 +56,5 @@ allowed = [
 # visible_digits = 2      # rightmost N digits used for MV
 # right_align    = true
 #
-# [gpio.error_led]        # single LED for error indication
+# [runtime.gpio.error_led]        # single LED for error indication
 # pin = 21

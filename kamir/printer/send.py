@@ -2,7 +2,7 @@ import logging
 import os
 
 from kamir.domain import Card
-from kamir.printer.render import Cut, Instruction, RasterImage, Rule, TextLine, render_card
+from kamir.printer.render import Cut, Instruction, RasterImage, Rule, TextLine, render_card, render_token
 
 log = logging.getLogger(__name__)
 
@@ -68,7 +68,7 @@ def _encode(instructions: list[Instruction]) -> bytes:
             if len(instr.data) != expected:
                 raise ValueError(
                     f"RasterImage data {len(instr.data)} B != "
-                    f"width_bytes*height={expected} B — re-run 'kamir build-db --force'"
+                    f"width_bytes*height={expected} B — re-run 'kamir pool build --force'"
                 )
             buf += _raster_bands(instr)
         elif isinstance(instr, Cut):
@@ -76,10 +76,7 @@ def _encode(instructions: list[Instruction]) -> bytes:
     return bytes(buf)
 
 
-def print_card(card: Card, device: str, art: RasterImage | None = None) -> None:
-    """Render card and write ESC/POS bytes to the thermal printer device."""
-    data = _encode(render_card(card, art))
-    log.debug("print_card: %d B → %s", len(data), device)
+def _write_to_device(data: bytes, device: str) -> None:
     fd = os.open(device, os.O_WRONLY)
     try:
         pos = 0
@@ -87,3 +84,17 @@ def print_card(card: Card, device: str, art: RasterImage | None = None) -> None:
             pos += os.write(fd, data[pos:])
     finally:
         os.close(fd)
+
+
+def print_card(card: Card, device: str, art: RasterImage | None = None) -> None:
+    """Render card and write ESC/POS bytes to the thermal printer device."""
+    data = _encode(render_card(card, art))
+    log.debug("print_card: %d B → %s", len(data), device)
+    _write_to_device(data, device)
+
+
+def print_token(card: Card, device: str, art: RasterImage | None = None) -> None:
+    """Render token layout and write ESC/POS bytes to the thermal printer device."""
+    data = _encode(render_token(card, art))
+    log.debug("print_token: %d B → %s", len(data), device)
+    _write_to_device(data, device)
