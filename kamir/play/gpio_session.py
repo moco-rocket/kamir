@@ -4,7 +4,7 @@ import threading
 from pathlib import Path
 
 from kamir.db.art import load_art
-from kamir.domain import Card
+from kamir.domain import Card, card_to_token_spec
 from kamir.hardware.display import ManaDisplay
 from kamir.hardware.leds import ErrorLed
 from kamir.play.select import select_creature
@@ -79,7 +79,7 @@ class GpioPlaySession:
                 return
             try:
                 art = load_art(self.db_path, card)
-                print_token(card, self.device, art)
+                print_token(card_to_token_spec(card), self.device, art)
                 self.last_card = card
                 log.info("Summoned: %s (MV %d)", card.name, card.mana_value)
                 self._signal_value()
@@ -98,7 +98,7 @@ class GpioPlaySession:
         try:
             self._signal_busy()
             art = load_art(self.db_path, self.last_card)
-            print_token(self.last_card, self.device, art)
+            print_token(card_to_token_spec(self.last_card), self.device, art)
             log.info("Reprinted: %s (MV %d)", self.last_card.name, self.last_card.mana_value)
             self._signal_value()
         except OSError as e:

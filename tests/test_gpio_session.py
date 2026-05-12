@@ -3,7 +3,7 @@ from unittest.mock import MagicMock, call, patch
 
 import pytest
 
-from kamir.domain import Card
+from kamir.domain import Card, card_to_token_spec
 from kamir.hardware.display import ManaDisplay
 from kamir.hardware.leds import ErrorLed
 from kamir.play.gpio_session import GpioPlaySession
@@ -87,7 +87,7 @@ class TestSummon:
             session.summon()
             mock_sel.assert_called_once_with(session.db_path, session.current_mv)
             mock_art.assert_called_once_with(session.db_path, card)
-            mock_print.assert_called_once_with(card, session.device, None)
+            mock_print.assert_called_once_with(card_to_token_spec(card), session.device, None)
 
     def test_last_card_saved_after_summon(self, session):
         card = _card()
@@ -160,7 +160,7 @@ class TestReprintLast:
         ):
             session.reprint_last()
             mock_art.assert_called_once_with(session.db_path, card)
-            mock_print.assert_called_once_with(card, session.device, None)
+            mock_print.assert_called_once_with(card_to_token_spec(card), session.device, None)
 
     def test_no_op_when_last_card_is_none(self, session):
         session.last_card = None

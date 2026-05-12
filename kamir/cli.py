@@ -7,6 +7,7 @@ from kamir.config import Config, Pool, RuntimeConfig
 from kamir.db.art import art_stats, fetch_and_store_art, load_art
 from kamir.db.load import open_source, iter_raw_cards, all_set_codes
 from kamir.db.write import create_kamir_db, insert_cards
+from kamir.domain import TokenSpec, card_to_token_spec
 from kamir.filter.cards import filter_cards
 from kamir.play.display import format_token
 from kamir.play.select import select_creature, find_by_name
@@ -116,7 +117,8 @@ def stage_play(runtime: RuntimeConfig, pool: Pool) -> None:
                 continue
 
         try:
-            print_token(card, runtime.printer_device, load_art(pool.path, card))
+            art = load_art(pool.path, card)
+            print_token(card_to_token_spec(card), runtime.printer_device, art)
             log.info("Printed: %s (MV %d)", card.name, card.mana_value)
         except OSError as e:
             print(f"  印刷エラー: {e}")
@@ -222,14 +224,79 @@ def stage_print_test(
             print(f"  マナ総量 {mana_value} のクリーチャーはプールに存在しません。")
             return
 
-    print(format_token(card))
+    spec = card_to_token_spec(card)
+    print(format_token(spec))
     print()
     try:
-        print_token(card, runtime.printer_device, load_art(pool.path, card))
+        art = load_art(pool.path, card)
+        print_token(spec, runtime.printer_device, art)
         log.info("print-test: %s (MV %d) → %s", card.name, card.mana_value, runtime.printer_device)
     except OSError as e:
         print(f"  印刷エラー: {e}")
         log.error("print-test failed: %s", e)
+
+
+def _prompt(label: str, *, default: str | None = None, optional: bool = False) -> str | None:
+    hint = f" [{default}]" if default is not None else (" (任意)" if optional else "")
+    while True:
+        try:
+            value = input(f"  {label}{hint}: ").strip()
+        except (KeyboardInterrupt, EOFError):
+            print()
+            return None
+        if value:
+            return value
+        if default is not None:
+            return default
+        if optional:
+            return ""
+        print("  入力が必要です。")
+
+
+def stage_token(runtime: RuntimeConfig) -> None:
+    print("Kamir — トークン作成  (Ctrl-C でキャンセル)")
+    print()
+
+    name = _prompt("名前")
+    if name is None:
+        return
+
+    type_ = _prompt("タイプ", default="Token Creature")
+    if type_ is None:
+        return
+
+    subtype = _prompt("サブタイプ", optional=True)
+    if subtype is None:
+        return
+    type_line = f"{type_} — {subtype}" if subtype else type_
+
+    power = _prompt("パワー")
+    if power is None:
+        return
+
+    toughness = _prompt("タフネス")
+    if toughness is None:
+        return
+
+    oracle_text = _prompt("テキスト", optional=True) or ""
+
+    spec = TokenSpec(
+        name=name,
+        type_line=type_line,
+        power=power,
+        toughness=toughness,
+        oracle_text=oracle_text,
+    )
+
+    print()
+    print(format_token(spec))
+    print()
+    try:
+        print_token(spec, runtime.printer_device)
+        log.info("token: %s (%s/%s) → %s", name, power, toughness, runtime.printer_device)
+    except OSError as e:
+        print(f"  印刷エラー: {e}")
+        log.error("token failed: %s", e)
 
 
 def _resolve_pool(config: Config, pool_name: str | None) -> Pool | None:
@@ -260,7 +327,7 @@ def main() -> None:
     ps.add_argument("name", nargs="?", default=None, help="Pool name (default: default pool)")
 
     play_p = sub.add_parser("play", help="Start an interactive Momir Basic play session")
-    play_p.add_argument("--pool", metavar="NAME", default=None, help="Pool to use (default: runtime.default_pool)")
+    play_p.add_argument("--pool", metavar="NAME", default=None)
 
     gpio_p = sub.add_parser("gpio-play", help="GPIO button-driven play session (Raspberry Pi)")
     gpio_p.add_argument("--pool", metavar="NAME", default=None)
@@ -270,6 +337,8 @@ def main() -> None:
     pt_group = pt.add_mutually_exclusive_group(required=True)
     pt_group.add_argument("--mv", type=int, metavar="N", help="Random card at mana value N")
     pt_group.add_argument("--name", metavar="NAME", help="Specific card by name")
+
+    sub.add_parser("token", help="Interactively create and print a custom token")
 
     args = parser.parse_args()
 
@@ -306,3 +375,6 @@ def main() -> None:
         pool = _resolve_pool(config, args.pool)
         if pool is not None:
             stage_print_test(config.runtime, pool, mana_value=args.mv, name=args.name)
+
+    elif args.command == "token":
+        stage_token(config.runtime)

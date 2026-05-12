@@ -1,9 +1,14 @@
 from dataclasses import dataclass
 
-from kamir.domain import Card
+from kamir.domain import Card, TokenSpec
 from kamir.filter.cards import wrap_oracle
 
 _PRINTER_WIDTH = 32
+
+# Blank lines used as the art drawing space when no art image is provided.
+# Chosen to approximate the physical height of a 192-dot Scryfall art raster
+# at the default ESC/POS line spacing (~30 dots/line).
+_TOKEN_ART_LINES = 6
 
 
 @dataclass(frozen=True)
@@ -78,41 +83,50 @@ def render_card(card: Card, art: RasterImage | None = None) -> list[Instruction]
     return out
 
 
+def _name_centered(name: str) -> TextLine:
+    pad = (_PRINTER_WIDTH - len(name)) // 2
+    return TextLine(" " * max(0, pad) + name, bold=True)
+
+
 def _pt_centered(power: str, toughness: str) -> TextLine:
     pt = f"{power}/{toughness}" if (power and toughness) else (power or toughness or "?/?")
     pad = (_PRINTER_WIDTH - len(pt)) // 2
-    return TextLine(" " * pad + pt, bold=True)
+    return TextLine(" " * max(0, pad) + pt, bold=True)
 
 
-def _token_footer(name: str, expansion: str) -> TextLine:
-    name_upper = name.upper()
-    exp = f"[{expansion}]"
-    gap = _PRINTER_WIDTH - len(name_upper) - len(exp)
-    if gap >= 1:
-        return TextLine(f"{name_upper}{' ' * gap}{exp}")
-    return TextLine(f"{name_upper}  {exp}")
+def render_token(spec: TokenSpec, art: RasterImage | None = None) -> list[Instruction]:
+    """Convert a TokenSpec to an ESC/POS instruction list.
 
-
-def render_token(card: Card, art: RasterImage | None = None) -> list[Instruction]:
-    """Convert a Card to a token-layout ESC/POS instruction list (P/T first)."""
+    Layout: centred name → fixed-height art space (or blank drawing area) →
+    bold P/T → type line → optional oracle text → cut.
+    When art is None, blank lines fill the same approximate space so all
+    tokens print at the same physical height.
+    """
     out: list[Instruction] = []
 
     out.append(TextLine(""))
     out.append(Rule(thick=True))
-    out.append(_pt_centered(card.power, card.toughness))
+    out.append(_name_centered(spec.name))
     out.append(Rule(thick=True))
+
     if art is not None:
         out.append(art)
+    else:
+        for _ in range(_TOKEN_ART_LINES):
+            out.append(TextLine(""))
+
+    out.append(Rule(thick=True))
+    out.append(_pt_centered(spec.power, spec.toughness))
+    out.append(Rule(thick=True))
+    out.append(TextLine(spec.type_line))
+
+    oracle = wrap_oracle(spec.oracle_text, width=_PRINTER_WIDTH)
+    if oracle:
         out.append(Rule(thick=False))
-    out.append(TextLine(card.type_line))
-    out.append(Rule(thick=False))
+        for line in oracle.split("\n"):
+            out.append(TextLine(line))
+        out.append(Rule(thick=False))
 
-    oracle = wrap_oracle(card.oracle_text, width=_PRINTER_WIDTH) or "(no text)"
-    for line in oracle.split("\n"):
-        out.append(TextLine(line))
-
-    out.append(Rule(thick=False))
-    out.append(_token_footer(card.name, card.expansion))
     out.append(Rule(thick=True))
     for _ in range(3):
         out.append(TextLine(""))

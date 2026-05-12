@@ -1,9 +1,11 @@
-from kamir.domain import Card
+from kamir.domain import Card, TokenSpec
 from kamir.filter.cards import wrap_oracle
 
 _WIDTH = 64
 _THICK = "=" * _WIDTH
 _THIN = "-" * _WIDTH
+
+_TOKEN_ART_LABEL = "＜ アート欄 ＞"
 
 
 def _header(name: str, mana_cost: str) -> str:
@@ -40,33 +42,34 @@ def format_card(card: Card) -> str:
     ])
 
 
-def _pt_centered(power: str, toughness: str) -> str:
-    pt = f"{power}/{toughness}" if (power and toughness) else (power or toughness or "?/?")
-    pad = (_WIDTH - len(pt)) // 2
-    return " " * pad + pt
+def _centered(text: str) -> str:
+    pad = (_WIDTH - len(text)) // 2
+    return " " * max(0, pad) + text
 
 
-def _token_footer(name: str, expansion: str) -> str:
-    exp = f"[{expansion}]"
-    gap = _WIDTH - len(name) - len(exp)
-    if gap < 1:
-        return f"{name}  {exp}"
-    return f"{name}{' ' * gap}{exp}"
+def format_token(spec: TokenSpec) -> str:
+    """Format a TokenSpec as a terminal display string matching the printed token layout."""
+    pt = f"{spec.power}/{spec.toughness}" if (spec.power and spec.toughness) else (spec.power or spec.toughness or "?/?")
 
+    oracle = wrap_oracle(spec.oracle_text, width=_WIDTH - 2)
+    if oracle:
+        oracle_section = "\n".join([_THIN, *[f"  {line}" for line in oracle.split("\n")], _THIN])
+    else:
+        oracle_section = ""
 
-def format_token(card: Card) -> str:
-    """Format a Card as a token-layout terminal display string (P/T first)."""
-    oracle = wrap_oracle(card.oracle_text, width=_WIDTH - 2) or "(no text)"
-    oracle_block = "\n".join(f"  {line}" for line in oracle.split("\n"))
-
-    return "\n".join([
+    lines = [
         _THICK,
-        _pt_centered(card.power, card.toughness),
+        _centered(spec.name),
         _THICK,
-        f"  {card.type_line}",
-        _THIN,
-        oracle_block,
-        _THIN,
-        _token_footer(card.name, card.expansion),
+        "",
+        _centered(_TOKEN_ART_LABEL),
+        "",
         _THICK,
-    ])
+        _centered(pt),
+        _THICK,
+        f"  {spec.type_line}",
+    ]
+    if oracle_section:
+        lines.append(oracle_section)
+    lines.append(_THICK)
+    return "\n".join(lines)
